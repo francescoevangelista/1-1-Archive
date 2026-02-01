@@ -1,0 +1,54 @@
+import React from 'react';
+import { AppSection } from '../types';
+
+interface HeaderProps {
+  onToggleUi: () => void;
+  onOpenSection: (section: AppSection) => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onToggleUi, onOpenSection }) => {
+  return (
+    <header className="fixed top-0 left-0 w-full flex justify-between items-center px-4 py-3 md:px-6 md:py-4 z-[70] pointer-events-none bg-white/80 dark:bg-black/80 backdrop-blur-sm safe-area-top">
+      {/* Logo */}
+      <div className="text-base md:text-lg font-bold tracking-widest pointer-events-auto cursor-default dark:text-white suisse-bold whitespace-nowrap">
+        1:1 Archivio
+      </div>
+      
+      {/* Navigation */}
+      <nav className="flex gap-4 md:gap-5 text-sm md:text-base pointer-events-auto suisse-regular whitespace-nowrap">
+        <button 
+          onClick={onToggleUi} 
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
+        >
+          UI
+        </button>
+        <button 
+          onClick={() => onOpenSection(AppSection.ARCHIVIO)} 
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
+        >
+          Archivio
+        </button>
+        <button 
+          onClick={() => onOpenSection(AppSection.INFO)} 
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
+        >
+          Info
+        </button>
+        <button 
+          onClick={() => onOpenSection(AppSection.EXPAND)} 
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity hidden md:block"
+        >
+          Expand
+        </button>
+        <button 
+          onClick={() => onOpenSection(AppSection.UPLOAD)} 
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity hidden md:block"
+        >
+          Upload
+        </button>
+      </nav>
+    </header>
+  );
+};
+
+export default Header;

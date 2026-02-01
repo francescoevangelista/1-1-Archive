@@ -1,0 +1,191 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   FONT: Suisse Int'l
+   Metti i file .woff/.woff2 in public/fonts/
+   ═══════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: 'Suisse Intl';
+  src: url('/fonts/SuisseIntl-Regular-WebS.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Suisse Intl';
+  src: url('/fonts/SuisseIntl-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Suisse Intl';
+  src: url('/fonts/SuisseIntl-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════════════ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Suisse Intl', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  font-weight: 400;
+  background-color: #FFFFFF;
+  color: #000000;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark {
+  background-color: #000000;
+  color: #FFFFFF;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════ */
+.suisse-bold { 
+  font-weight: 700; 
+  font-family: 'Suisse Intl', sans-serif; 
+}
+
+.suisse-medium { 
+  font-weight: 500; 
+  font-family: 'Suisse Intl', sans-serif; 
+}
+
+.suisse-regular { 
+  font-weight: 400; 
+  font-family: 'Suisse Intl', sans-serif; 
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACETATE EFFECT (LIGHT TABLE)
+   ═══════════════════════════════════════════════════════════════ */
+.acetate-layer {
+  mix-blend-mode: multiply;
+  opacity: 0.08;
+}
+
+body.dark .acetate-layer {
+  mix-blend-mode: screen;
+  opacity: 0.15;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BRUTALIST BORDERS
+   ═══════════════════════════════════════════════════════════════ */
+.brutalist-border {
+  border: 1px solid #000000;
+}
+
+body.dark .brutalist-border {
+  border-color: #FFFFFF;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RANGE INPUT (SLIDER)
+   ═══════════════════════════════════════════════════════════════ */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 2px;
+  background: #000;
+}
+
+body.dark input[type=range]::-webkit-slider-runnable-track {
+  background: #FFF;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px;
+  width: 20px;
+  border: 2px solid #000;
+  background: #fff;
+  margin-top: -9px;
+}
+
+body.dark input[type=range]::-webkit-slider-thumb {
+  border-color: #FFF;
+  background: #000;
+}
+
+/* Firefox */
+input[type=range]::-moz-range-track {
+  width: 100%;
+  height: 2px;
+  background: #000;
+}
+
+body.dark input[type=range]::-moz-range-track {
+  background: #FFF;
+}
+
+input[type=range]::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border: 2px solid #000;
+  background: #fff;
+  border-radius: 0;
+}
+
+body.dark input[type=range]::-moz-range-thumb {
+  border-color: #FFF;
+  background: #000;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE SAFE AREA (iPhone notch, etc.)
+   ═══════════════════════════════════════════════════════════════ */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
