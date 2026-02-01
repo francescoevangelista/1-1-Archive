@@ -36,13 +36,13 @@ const Header: React.FC<HeaderProps> = ({ onToggleUi, onOpenSection }) => {
         </button>
         <button 
           onClick={() => onOpenSection(AppSection.EXPAND)} 
-          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity hidden md:block"
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
         >
           Expand
         </button>
         <button 
           onClick={() => onOpenSection(AppSection.UPLOAD)} 
-          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity hidden md:block"
+          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
         >
           Upload
         </button>
