@@ -1,261 +1,275 @@
-import React, { useEffect, useRef } from 'react';
-import Matter from 'matter-js';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import Header from './components/Header';
+import Toolbar from './components/Toolbar';
+import CanvasArea from './components/CanvasArea';
+import Overlay from './components/Overlay';
+import { AppSection, Category, ImageObject } from './types';
+import { useIsMobile } from './hooks/useIsMobile';
 
-interface CanvasAreaProps {
-  hasStroke: boolean;
-  isBlackAndWhite: boolean;
-  isPhotoMode: boolean;
-  isOverlapMode: boolean;
-  showCategoryLabels: boolean;
-  gravityEnabled: boolean;
-  isUiVisible: boolean;
-  isMobile: boolean;
-}
+function App() {
+  const [imageCount, setImageCount] = useState(0);
+  const [maxCount, setMaxCount] = useState(88);
+  const [isUiVisible, setIsUiVisible] = useState(true);
+  const [hasStroke, setHasStroke] = useState(false);
+  const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
+  const [isPhotoMode, setIsPhotoMode] = useState(true);
+  const [isOverlapMode, setIsOverlapMode] = useState(false);
+  const [showCategoryLabels, setShowCategoryLabels] = useState(true);
+  const [currentSize, setCurrentSize] = useState(() => window.innerWidth < 768 ? 70 : 100);
+  const [activeSection, setActiveSection] = useState<AppSection>(AppSection.NONE);
+  const [isStarted, setIsStarted] = useState(false);
+  
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [gravityEnabled, setGravityEnabled] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  const isMobile = useIsMobile();
+  
+  const genIntervalRef = useRef<number | null>(null);
+  const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  const stateRef = useRef({ imageCount, maxCount, soundEnabled });
+  const sizeRef = useRef(currentSize);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-const CanvasArea: React.FC<CanvasAreaProps> = ({
-  hasStroke,
-  isBlackAndWhite,
-  isPhotoMode,
-  isOverlapMode,
-  showCategoryLabels,
-  gravityEnabled,
-  isUiVisible,
-  isMobile
-}) => {
-  const sceneRef = useRef<HTMLDivElement>(null);
-  const engineRef = useRef<Matter.Engine | null>(null);
-  const renderRef = useRef<Matter.Render | null>(null);
-  const wallsRef = useRef<{ [key: string]: Matter.Body } | null>(null);
-  const bodiesMapRef = useRef<Map<number, Matter.Body>>(new Map());
-
-  // 1. Setup Engine & World
   useEffect(() => {
-    if (!sceneRef.current) return;
+    stateRef.current = { imageCount, maxCount, soundEnabled };
+  }, [imageCount, maxCount, soundEnabled]);
 
-    const engine = Matter.Engine.create();
-    const render = Matter.Render.create({
-      element: sceneRef.current,
-      engine: engine,
-      options: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        background: 'transparent',
-        wireframes: false,
-        pixelRatio: window.devicePixelRatio
+  useEffect(() => {
+    sizeRef.current = currentSize;
+  }, [currentSize]);
+
+  useEffect(() => {
+    document.body.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
+
+  const playSound = useCallback(() => {
+    if (!stateRef.current.soundEnabled) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-    });
-
-    const wallThick = 60;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    const ground = Matter.Bodies.rectangle(width / 2, height + wallThick / 2 - 10, width, wallThick, { 
-      isStatic: true, label: 'ground', render: { visible: false } 
-    });
-    const leftWall = Matter.Bodies.rectangle(0 - wallThick / 2, height / 2, wallThick, height * 5, { 
-      isStatic: true, label: 'wall', render: { visible: false } 
-    });
-    const rightWall = Matter.Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 5, { 
-      isStatic: true, label: 'wall', render: { visible: false } 
-    });
-    const ceiling = Matter.Bodies.rectangle(width / 2, -wallThick * 4, width, wallThick, { 
-      isStatic: true, label: 'ceiling', render: { visible: false } 
-    });
-
-    wallsRef.current = { ground, leftWall, rightWall, ceiling };
-    Matter.World.add(engine.world, [ground, leftWall, rightWall, ceiling]);
-
-    const runner = Matter.Runner.create();
-    Matter.Runner.run(runner, engine);
-    Matter.Render.run(render);
-
-    engineRef.current = engine;
-    renderRef.current = render;
-
-    const mouse = Matter.Mouse.create(render.canvas);
-    mouse.pixelRatio = window.devicePixelRatio;
-    const mouseConstraint = Matter.MouseConstraint.create(engine, {
-      mouse: mouse,
-      constraint: { stiffness: 0.2, render: { visible: false } }
-    });
-    Matter.World.add(engine.world, mouseConstraint);
-
-    // Disable mouse scrolling interaction
-    mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
-    mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
-
-    const handleResize = () => {
-      render.canvas.width = window.innerWidth;
-      render.canvas.height = window.innerHeight;
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
       
-      if (wallsRef.current) {
-        Matter.Body.setPosition(wallsRef.current.rightWall, { x: window.innerWidth + 30, y: window.innerHeight / 2 });
-        Matter.Body.setPosition(wallsRef.current.ground, { x: window.innerWidth / 2, y: window.innerHeight + 30 });
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(800 + Math.random() * 400, ctx.currentTime);
+      gain.gain.setValueAtTime(0.03, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.06);
+    } catch (e) {
+      console.warn('Audio error:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onMouse = (e: MouseEvent) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    };
+    const onTouch = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }
     };
-    window.addEventListener('resize', handleResize);
-
+    window.addEventListener('mousemove', onMouse);
+    window.addEventListener('touchmove', onTouch, { passive: true });
     return () => {
-      window.removeEventListener('resize', handleResize);
-      Matter.Render.stop(render);
-      Matter.Runner.stop(runner);
-      if (render.canvas) render.canvas.remove();
+      window.removeEventListener('mousemove', onMouse);
+      window.removeEventListener('touchmove', onTouch);
     };
   }, []);
 
-  // 2. PAVIMENTO DINAMICO
   useEffect(() => {
-    if (!wallsRef.current || !engineRef.current) return;
-    
-    const height = window.innerHeight;
-    const width = window.innerWidth;
-    const wallThick = 60;
-    
-    const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
-    const newY = height - toolbarHeight + (wallThick / 2);
-
-    Matter.Body.setPosition(wallsRef.current.ground, {
-      x: width / 2,
-      y: newY
-    });
-
-    Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
-      if (!body.isStatic) {
-        Matter.Sleeping.set(body, false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveSection(AppSection.NONE);
+        window.dispatchEvent(new CustomEvent('close-zoomed-view'));
       }
-    });
-
-  }, [isUiVisible, isMobile]);
-
-  // 3. Handle Add Image Event
-  useEffect(() => {
-    const handleAddImage = (e: CustomEvent) => {
-      if (!engineRef.current) return;
-      const { image, size, x, y } = e.detail;
-      const { id, url, category, averageColor } = image;
-
-      const body = Matter.Bodies.rectangle(x, y, size, size, {
-        chamfer: { radius: 0 },
-        restitution: 0.5,
-        friction: 0.5,
-        frictionAir: 0.02,
-        render: {
-          sprite: {
-            texture: url,
-            xScale: size / 400,
-            yScale: size / 400
-          }
-        },
-        label: category
-      });
-
-      (body as any).customData = {
-        id,
-        // url rimosso per evitare errori (tanto lo usa lo sprite sopra)
-        category,
-        color: averageColor,
-        w: size,
-        h: size
-      };
-
-      bodiesMapRef.current.set(body.id, body);
-      Matter.World.add(engineRef.current.world, body);
     };
-
-    const handleClear = () => {
-      if (!engineRef.current) return;
-      const bodies = Array.from(bodiesMapRef.current.values());
-      Matter.World.remove(engineRef.current.world, bodies);
-      bodiesMapRef.current.clear();
-    };
-    
-    const handleChaos = () => {
-       if (!engineRef.current) return;
-       const bodies = Array.from(bodiesMapRef.current.values());
-       bodies.forEach(b => {
-         Matter.Body.applyForce(b, b.position, { 
-           x: (Math.random() - 0.5) * 0.5, 
-           y: (Math.random() - 0.5) * 0.5 
-         });
-       });
-    };
-
-    window.addEventListener('add-image', handleAddImage as EventListener);
-    window.addEventListener('clear-canvas', handleClear);
-    window.addEventListener('chaos-trigger', handleChaos);
-    
-    return () => {
-      window.removeEventListener('add-image', handleAddImage as EventListener);
-      window.removeEventListener('clear-canvas', handleClear);
-      window.removeEventListener('chaos-trigger', handleChaos);
-    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // 4. Custom Render Loop
-  useEffect(() => {
-    if (!renderRef.current) return;
-    const render = renderRef.current;
+  const getCategory = (index: number): Category => {
+    const safe = ((index - 1) % 88) + 1;
+    if (safe <= 22) return 'AMB';
+    if (safe <= 44) return 'STL';
+    if (safe <= 66) return 'FIG';
+    return 'GRA';
+  };
+
+  const getColor = (cat: Category): string => {
+    const colors: Record<Category, string> = { 
+      AMB: '#D4C5B0', 
+      STL: '#B8A898', 
+      FIG: '#9CAF88', 
+      GRA: '#4A4A4A' 
+    };
+    return colors[cat];
+  };
+
+  const addImageToCanvas = useCallback((customUrl?: string, customLabel?: string, force = false) => {
+    if (!isStarted) setIsStarted(true);
     
-    Matter.Events.on(render, 'afterRender', () => {
-      const ctx = render.context;
-      const bodies = Array.from(bodiesMapRef.current.values());
+    if (!force && stateRef.current.imageCount >= stateRef.current.maxCount) {
+      if (genIntervalRef.current) {
+        clearInterval(genIntervalRef.current);
+        genIntervalRef.current = null;
+      }
+      return;
+    }
 
-      bodies.forEach(body => {
-        const { x, y } = body.position;
-        const { w, h, category, color } = (body as any).customData;
-        const angle = body.angle;
+    const id = (stateRef.current.imageCount % 88) + 1;
+    const cat = getCategory(id);
+    const imgObj: ImageObject = {
+      id,
+      url: customUrl || `assets/img-${id}.png`,
+      category: (customLabel as Category) || cat,
+      averageColor: getColor(cat)
+    };
+    
+    playSound();
 
-        ctx.translate(x, y);
-        ctx.rotate(angle);
+    const size = sizeRef.current;
+    const half = size / 2;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const mobile = vw < 768;
+    
+    const headerH = 56;
+    const toolbarH = (mobile && isUiVisible) ? 110 : 0;
+    const sidebarW = (!mobile && isUiVisible) ? 280 : 0;
+    
+    const left = sidebarW + half + 15;
+    const right = vw - half - 15;
+    const top = headerH + half + 15;
+    const bottom = vh - toolbarH - half - 15;
 
-        if (!isPhotoMode) {
-          ctx.fillStyle = isBlackAndWhite ? '#888' : color;
-          ctx.fillRect(-w/2, -h/2, w, h);
-        }
-        
-        if (hasStroke) {
-          ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(-w/2, -h/2, w, h);
-        }
+    const x = Math.max(left, Math.min(right, mousePosRef.current.x));
+    const y = Math.max(top, Math.min(bottom, mousePosRef.current.y));
 
-        if (isOverlapMode) {
-          ctx.globalCompositeOperation = document.body.classList.contains('dark') ? 'screen' : 'multiply';
-          ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-          ctx.fillRect(-w/2, -h/2, w, h);
-          ctx.globalCompositeOperation = 'source-over';
-        }
+    window.dispatchEvent(new CustomEvent('add-image', { 
+      detail: { image: imgObj, size, x, y } 
+    }));
+    
+    setImageCount(prev => prev + 1);
+  }, [isStarted, isUiVisible, playSound]);
 
-        if (showCategoryLabels) {
-          ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          ctx.font = '10px "Suisse Intl"';
-          ctx.textAlign = 'center';
-          ctx.fillText(category, 0, -h/2 + 12);
-        }
+  const startGenerating = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.pointer-events-auto') && !target.closest('canvas')) return;
+    
+    if (activeSection !== AppSection.NONE) return;
+    if (document.body.getAttribute('data-is-over-body') === 'true') return;
 
-        ctx.rotate(-angle);
-        ctx.translate(-x, -y);
-      });
-    });
-  }, [hasStroke, isBlackAndWhite, isOverlapMode, showCategoryLabels, isPhotoMode]);
+    if ('clientX' in e) {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    } else if ('touches' in e && e.touches[0]) {
+      mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
 
-  // 5. Gravity Toggle
-  useEffect(() => {
-    if (!engineRef.current) return;
-    engineRef.current.world.gravity.y = gravityEnabled ? 1 : 0;
-    Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
-       if (!body.isStatic) Matter.Sleeping.set(body, false);
-    });
-  }, [gravityEnabled]);
+    addImageToCanvas();
+    
+    if (genIntervalRef.current) clearInterval(genIntervalRef.current);
+    genIntervalRef.current = window.setInterval(addImageToCanvas, 100);
+  }, [addImageToCanvas, activeSection]);
+
+  const stopGenerating = useCallback(() => {
+    if (genIntervalRef.current) {
+      clearInterval(genIntervalRef.current);
+      genIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleExpandUpload = (file: File) => {
+    if (!isStarted) setIsStarted(true);
+    setActiveSection(AppSection.NONE);
+    const url = URL.createObjectURL(file);
+    setMaxCount(prev => prev + 1);
+    setTimeout(() => addImageToCanvas(url, 'EXP', true), 50);
+  };
+
+  const triggerChaos = () => window.dispatchEvent(new CustomEvent('chaos-trigger'));
 
   return (
     <div 
-      ref={sceneRef} 
-      className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-500
-        ${isBlackAndWhite ? 'grayscale' : ''}
-      `}
-    />
-  );
-};
+      className="relative w-screen h-screen bg-white dark:bg-black overflow-hidden no-select transition-colors duration-300"
+      onMouseDown={startGenerating}
+      onMouseUp={stopGenerating}
+      onMouseLeave={stopGenerating}
+      onTouchStart={startGenerating}
+      onTouchEnd={stopGenerating}
+    >
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <h1 
+          className="text-black dark:text-white acetate-layer suisse-bold leading-none select-none tracking-tighter"
+          style={{ fontSize: 'clamp(4rem, 35vw, 70rem)' }}
+        >
+          {!isStarted ? '1:1' : `${String(imageCount).padStart(2, '0')}/${maxCount}`}
+        </h1>
+      </div>
 
-export default CanvasArea;
+      <CanvasArea 
+        hasStroke={hasStroke} 
+        isBlackAndWhite={isBlackAndWhite}
+        isPhotoMode={isPhotoMode}
+        isOverlapMode={isOverlapMode}
+        showCategoryLabels={showCategoryLabels}
+        gravityEnabled={gravityEnabled}
+        isUiVisible={isUiVisible}
+        isMobile={isMobile}
+      />
+
+      <Header 
+        onToggleUi={() => setIsUiVisible(!isUiVisible)} 
+        onOpenSection={(section) => setActiveSection(section === activeSection ? AppSection.NONE : section)}
+      />
+
+      <Toolbar 
+        isMobile={isMobile}
+        isVisible={isUiVisible}
+        onToggleVisibility={() => setIsUiVisible(!isUiVisible)}
+        isPhotoMode={isPhotoMode}
+        onTogglePhoto={() => setIsPhotoMode(!isPhotoMode)}
+        isOverlapMode={isOverlapMode}
+        onToggleOverlap={() => setIsOverlapMode(!isOverlapMode)}
+        hasStroke={hasStroke}
+        onToggleStroke={() => setHasStroke(!hasStroke)}
+        isBlackAndWhite={isBlackAndWhite}
+        onToggleBW={() => setIsBlackAndWhite(!isBlackAndWhite)}
+        showCategoryLabels={showCategoryLabels}
+        onToggleCategory={() => setShowCategoryLabels(!showCategoryLabels)}
+        currentSize={currentSize}
+        onSizeChange={setCurrentSize}
+        onDelete={() => {
+          setImageCount(0);
+          setIsStarted(false);
+          window.dispatchEvent(new CustomEvent('clear-canvas'));
+        }}
+        onSave={() => window.dispatchEvent(new CustomEvent('save-canvas'))}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        gravityEnabled={gravityEnabled}
+        onToggleGravity={() => setGravityEnabled(!gravityEnabled)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        onChaos={triggerChaos}
+      />
+
+      {activeSection !== AppSection.NONE && (
+        <Overlay 
+          section={activeSection} 
+          onClose={() => setActiveSection(AppSection.NONE)} 
+          onFileUpload={handleExpandUpload}
+        />
+      )}
+    </div>
+  );
+}
+
+export default App;

@@ -151,7 +151,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       (body as any).customData = {
         id,
-        // url rimosso per evitare errori (tanto lo usa lo sprite sopra)
         category,
         color: averageColor,
         w: size,

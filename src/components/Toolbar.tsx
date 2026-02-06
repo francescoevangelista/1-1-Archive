@@ -43,6 +43,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onChaos
 }) => {
   
+  // ════════════ MOBILE VERSION ════════════
   if (isMobile) {
     if (!isVisible) {
       return (
@@ -111,6 +112,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     );
   }
 
+  // ════════════ DESKTOP VERSION ════════════
   if (!isVisible) {
     return (
       <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50 pointer-events-auto pl-2">
