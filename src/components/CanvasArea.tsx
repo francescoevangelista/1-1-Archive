@@ -14,10 +14,10 @@ interface CanvasAreaProps {
   isMobile: boolean;
 }
 
-const CanvasArea: React.FC<CanvasAreaProps> = ({ 
-  hasStroke, 
-  isBlackAndWhite, 
-  isPhotoMode, 
+const CanvasArea: React.FC<CanvasAreaProps> = ({
+  hasStroke,
+  isBlackAndWhite,
+  isPhotoMode,
   isOverlapMode,
   showCategoryLabels,
   currentSize,
@@ -25,294 +25,265 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   isUiVisible,
   isMobile
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
-  const wallsRef = useRef<{ ground: Matter.Body; left: Matter.Body; right: Matter.Body; ceiling: Matter.Body } | null>(null);
-  
-  const settingsRef = useRef({ 
-    hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, 
-    showCategoryLabels, currentSize, gravityEnabled, isUiVisible, isMobile 
-  });
-  const lastSizeRef = useRef(currentSize);
+  const wallsRef = useRef<{ [key: string]: Matter.Body } | null>(null);
+  const bodiesMapRef = useRef<Map<number, Matter.Body>>(new Map());
 
-  // Update settings ref
+  // 1. Setup Engine & World
   useEffect(() => {
-    settingsRef.current = { 
-      hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, 
-      showCategoryLabels, currentSize, gravityEnabled, isUiVisible, isMobile 
-    };
-    
-    if (engineRef.current) {
-      engineRef.current.gravity.y = gravityEnabled ? 1 : 0;
-    }
+    if (!sceneRef.current) return;
 
-    // Scale existing bodies when size changes
-    if (engineRef.current && currentSize !== lastSizeRef.current) {
-      const scaleFactor = currentSize / lastSizeRef.current;
-      const bodies = Matter.Composite.allBodies(engineRef.current.world);
-      bodies.forEach(body => {
-        if (!body.isStatic && (body as any).boxSize) {
-          Matter.Body.scale(body, scaleFactor, scaleFactor);
-          (body as any).boxSize *= scaleFactor;
-        }
-      });
-      lastSizeRef.current = currentSize;
-    }
-  }, [hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, showCategoryLabels, currentSize, gravityEnabled, isUiVisible, isMobile]);
-
-  // Main setup
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const container = containerRef.current;
-    const { Engine, Render, Runner, MouseConstraint, Mouse, Composite, Bodies, Events, Query } = Matter;
-
-    // Get actual container size
-    const getSize = () => ({
-      width: container.clientWidth || window.innerWidth,
-      height: container.clientHeight || window.innerHeight
-    });
-
-    const { width, height } = getSize();
-
-    // Create engine
-    const engine = Engine.create({ 
-      gravity: { x: 0, y: settingsRef.current.gravityEnabled ? 1 : 0, scale: 0.001 } 
-    });
-    engineRef.current = engine;
-
-    // Create renderer
-    const render = Render.create({
-      element: container,
+    const engine = Matter.Engine.create();
+    const render = Matter.Render.create({
+      element: sceneRef.current,
       engine: engine,
       options: {
-        width,
-        height,
+        width: window.innerWidth,
+        height: window.innerHeight,
         background: 'transparent',
         wireframes: false,
-        pixelRatio: Math.min(window.devicePixelRatio, 2),
+        pixelRatio: window.devicePixelRatio
       }
     });
+
+    // Create Walls
+    const wallThick = 60;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const ground = Matter.Bodies.rectangle(width / 2, height + wallThick / 2 - 10, width, wallThick, { 
+      isStatic: true, label: 'ground', render: { visible: false } 
+    });
+    const leftWall = Matter.Bodies.rectangle(0 - wallThick / 2, height / 2, wallThick, height * 5, { 
+      isStatic: true, label: 'wall', render: { visible: false } 
+    });
+    const rightWall = Matter.Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 5, { 
+      isStatic: true, label: 'wall', render: { visible: false } 
+    });
+    const ceiling = Matter.Bodies.rectangle(width / 2, -wallThick * 4, width, wallThick, { 
+      isStatic: true, label: 'ceiling', render: { visible: false } 
+    });
+
+    wallsRef.current = { ground, leftWall, rightWall, ceiling };
+    Matter.World.add(engine.world, [ground, leftWall, rightWall, ceiling]);
+
+    // Runner
+    const runner = Matter.Runner.create();
+    Matter.Runner.run(runner, engine);
+    Matter.Render.run(render);
+
+    engineRef.current = engine;
     renderRef.current = render;
 
-    // Run
-    const runner = Runner.create();
-    Runner.run(runner, engine);
-    Render.run(render);
-
-    // Calculate wall positions
-    const getWallPositions = () => {
-      const { width: w, height: h } = getSize();
-      const mobile = w < 768;
-      const headerH = 56;
-      const toolbarH = (mobile && settingsRef.current.isUiVisible) ? 110 : 0;
-      
-      return {
-        ground: { x: w / 2, y: h - toolbarH + 50 },
-        ceiling: { x: w / 2, y: headerH - 50 },
-        left: { x: -50, y: h / 2 },
-        right: { x: w + 50, y: h / 2 },
-        wallWidth: w * 3,
-        wallHeight: h * 3
-      };
-    };
-
-    // Create walls
-    const wallOpts = { isStatic: true, friction: 1, restitution: 0.3, render: { visible: false } };
-    const pos = getWallPositions();
-    
-    const ground = Bodies.rectangle(pos.ground.x, pos.ground.y, pos.wallWidth, 100, wallOpts);
-    const ceiling = Bodies.rectangle(pos.ceiling.x, pos.ceiling.y, pos.wallWidth, 100, wallOpts);
-    const leftWall = Bodies.rectangle(pos.left.x, pos.left.y, 100, pos.wallHeight, wallOpts);
-    const rightWall = Bodies.rectangle(pos.right.x, pos.right.y, 100, pos.wallHeight, wallOpts);
-    
-    wallsRef.current = { ground, left: leftWall, right: rightWall, ceiling };
-    Composite.add(engine.world, [ground, ceiling, leftWall, rightWall]);
-
-    // Mouse constraint
-    const mouse = Mouse.create(render.canvas);
-    mouse.pixelRatio = render.options.pixelRatio || 1;
-
-    const mouseConstraint = MouseConstraint.create(engine, {
-      mouse,
+    // Mouse control
+    const mouse = Matter.Mouse.create(render.canvas);
+    mouse.pixelRatio = window.devicePixelRatio;
+    const mouseConstraint = Matter.MouseConstraint.create(engine, {
+      mouse: mouse,
       constraint: { stiffness: 0.2, render: { visible: false } }
     });
-    Composite.add(engine.world, mouseConstraint);
+    Matter.World.add(engine.world, mouseConstraint);
 
-    // Track if mouse is over a body
-    Events.on(mouseConstraint, 'mousemove', (e: any) => {
-      const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
-      const hit = Query.point(bodies, e.mouse.position);
-      document.body.setAttribute('data-is-over-body', hit.length > 0 ? 'true' : 'false');
-    });
+    // Disable mouse scrolling interaction
+    mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
+    mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
-    // Custom rendering
-    Events.on(render, 'afterRender', () => {
-      const ctx = render.context;
-      const bodies = Composite.allBodies(engine.world);
-      const { hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, showCategoryLabels } = settingsRef.current;
-      const isDark = document.body.classList.contains('dark');
-
-      bodies.forEach(body => {
-        const imgObj = (body as any).imageObj as ImageObject;
-        if (body.isStatic || !imgObj) return;
-        
-        const { x, y } = body.position;
-        const angle = body.angle;
-        const size = (body as any).boxSize;
-
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angle);
-
-        // Blend mode for acetate effect
-        if (isOverlapMode) {
-          ctx.globalCompositeOperation = isDark ? 'screen' : 'multiply';
-          ctx.globalAlpha = 0.85;
-        } else {
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.globalAlpha = 1.0;
-        }
-
-        // Grayscale filter
-        if (isBlackAndWhite) ctx.filter = 'grayscale(100%)';
-
-        // Draw image or color
-        if (isPhotoMode) {
-          const img = (body as any).cachedImage as HTMLImageElement;
-          if (img && img.complete && img.naturalWidth > 0) {
-            try {
-              ctx.drawImage(img, -size/2, -size/2, size, size);
-            } catch {
-              ctx.fillStyle = imgObj.averageColor;
-              ctx.fillRect(-size/2, -size/2, size, size);
-            }
-          } else {
-            ctx.fillStyle = imgObj.averageColor;
-            ctx.fillRect(-size/2, -size/2, size, size);
-          }
-        } else {
-          ctx.fillStyle = imgObj.averageColor;
-          ctx.fillRect(-size/2, -size/2, size, size);
-        }
-
-        ctx.filter = 'none';
-
-        // Stroke
-        if (hasStroke) {
-          ctx.strokeStyle = isDark ? '#FFFFFF' : '#000000';
-          ctx.lineWidth = 1;
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.strokeRect(-size/2, -size/2, size, size);
-        }
-
-        // Category label
-        if (showCategoryLabels) {
-          ctx.fillStyle = isDark ? '#FFFFFF' : '#000000';
-          ctx.font = '400 9px "Suisse Intl", sans-serif';
-          ctx.textAlign = 'center';
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.fillText(imgObj.category, 0, size/2 + 12);
-        }
-
-        ctx.restore();
-      });
-    });
-
-    // Resize handler using ResizeObserver
-    const updateSize = () => {
-      const { width: w, height: h } = getSize();
+    // Resize handler
+    const handleResize = () => {
+      render.canvas.width = window.innerWidth;
+      render.canvas.height = window.innerHeight;
       
-      render.canvas.width = w * (render.options.pixelRatio || 1);
-      render.canvas.height = h * (render.options.pixelRatio || 1);
-      render.canvas.style.width = `${w}px`;
-      render.canvas.style.height = `${h}px`;
-      render.options.width = w;
-      render.options.height = h;
-
-      // Update wall positions
       if (wallsRef.current) {
-        const p = getWallPositions();
-        Matter.Body.setPosition(wallsRef.current.ground, Matter.Vector.create(p.ground.x, p.ground.y));
-        Matter.Body.setPosition(wallsRef.current.ceiling, Matter.Vector.create(p.ceiling.x, p.ceiling.y));
-        Matter.Body.setPosition(wallsRef.current.left, Matter.Vector.create(p.left.x, p.left.y));
-        Matter.Body.setPosition(wallsRef.current.right, Matter.Vector.create(p.right.x, p.right.y));
+        Matter.Body.setPosition(wallsRef.current.rightWall, { x: window.innerWidth + 30, y: window.innerHeight / 2 });
+        Matter.Body.setPosition(wallsRef.current.ground, { x: window.innerWidth / 2, y: window.innerHeight + 30 });
       }
     };
+    window.addEventListener('resize', handleResize);
 
-    // ResizeObserver for zoom and resize
-    const resizeObserver = new ResizeObserver(() => {
-      updateSize();
-    });
-    resizeObserver.observe(container);
-    window.addEventListener('resize', updateSize);
-
-    // Event handlers
-    const handleAddImage = (e: any) => {
-      const { image, size, x, y } = e.detail;
-      const box = Bodies.rectangle(x, y, size, size, {
-        frictionAir: 0.02,
-        restitution: 0.1,
-        render: { visible: false }
-      });
-      (box as any).imageObj = image;
-      (box as any).boxSize = size;
-      
-      // Preload image
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = image.url;
-      (box as any).cachedImage = img;
-      
-      Composite.add(engine.world, box);
-    };
-
-    const handleChaos = () => {
-      const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
-      bodies.forEach(body => {
-        const force = 0.05 * body.mass;
-        Matter.Body.applyForce(body, body.position, {
-          x: (Math.random() - 0.5) * force,
-          y: (Math.random() - 0.5) * force
-        });
-        Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.3);
-      });
-    };
-
-    const handleClear = () => {
-      const toRemove = engine.world.bodies.filter(b => !b.isStatic);
-      Composite.remove(engine.world, toRemove);
-    };
-
-    const handleSave = () => {
-      const link = document.createElement('a');
-      link.download = `1-1_${Date.now()}.png`;
-      link.href = render.canvas.toDataURL('image/png');
-      link.click();
-    };
-
-    window.addEventListener('add-image', handleAddImage);
-    window.addEventListener('chaos-trigger', handleChaos);
-    window.addEventListener('clear-canvas', handleClear);
-    window.addEventListener('save-canvas', handleSave);
-
-    // Cleanup
     return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', updateSize);
-      window.removeEventListener('add-image', handleAddImage);
-      window.removeEventListener('chaos-trigger', handleChaos);
-      window.removeEventListener('clear-canvas', handleClear);
-      window.removeEventListener('save-canvas', handleSave);
-      Render.stop(render);
-      Runner.stop(runner);
-      Engine.clear(engine);
-      render.canvas.remove();
+      window.removeEventListener('resize', handleResize);
+      Matter.Render.stop(render);
+      Matter.Runner.stop(runner);
+      if (render.canvas) render.canvas.remove();
     };
   }, []);
 
-  return <div ref={containerRef} className="absolute inset-0 z-10 w-full h-full" />;
+  // 2. PAVIMENTO DINAMICO (Logica Toolbar Mobile)
+  useEffect(() => {
+    if (!wallsRef.current || !engineRef.current) return;
+    
+    const height = window.innerHeight;
+    const width = window.innerWidth;
+    const wallThick = 60;
+    
+    // Se siamo su mobile e la UI è visibile, il pavimento sale
+    // Stimiamo l'altezza della toolbar aperta a circa 350px (o regolala a piacere)
+    // Se è chiusa, c'è la barra piccola (es. 60px), se vuoi che le immagini stiano sopra la barra piccola usa 60, altrimenti 0
+    const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
+    
+    // Nuova Y del pavimento
+    const newY = height - toolbarHeight + (wallThick / 2);
+
+    // Spostiamo il pavimento
+    Matter.Body.setPosition(wallsRef.current.ground, {
+      x: width / 2,
+      y: newY
+    });
+
+    // SVEGLIAMO I CORPI!
+    // Se il pavimento si muove, i corpi che dormono (isSleeping) devono svegliarsi per cadere/adattarsi
+    Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
+      if (!body.isStatic) {
+        Matter.Sleeping.set(body, false);
+      }
+    });
+
+  }, [isUiVisible, isMobile]); // Si attiva quando apri/chiudi la UI
+
+  // 3. Handle Add Image Event
+  useEffect(() => {
+    const handleAddImage = (e: CustomEvent) => {
+      if (!engineRef.current) return;
+      const { image, size, x, y } = e.detail;
+      const { id, url, category, averageColor } = image;
+
+      const body = Matter.Bodies.rectangle(x, y, size, size, {
+        chamfer: { radius: 0 },
+        restitution: 0.5,
+        friction: 0.5,
+        frictionAir: 0.02,
+        render: {
+          sprite: {
+            texture: url,
+            xScale: size / 400, // Assuming 400px placeholder logic size
+            yScale: size / 400
+          }
+        },
+        label: category // Store category in label for simplicity
+      });
+
+      // Custom properties for rendering loop
+      (body as any).customData = {
+        id,
+        url,
+        category,
+        color: averageColor,
+        w: size,
+        h: size
+      };
+
+      bodiesMapRef.current.set(body.id, body);
+      Matter.World.add(engineRef.current.world, body);
+    };
+
+    const handleClear = () => {
+      if (!engineRef.current) return;
+      const bodies = Array.from(bodiesMapRef.current.values());
+      Matter.World.remove(engineRef.current.world, bodies);
+      bodiesMapRef.current.clear();
+    };
+    
+    const handleChaos = () => {
+       if (!engineRef.current) return;
+       const bodies = Array.from(bodiesMapRef.current.values());
+       bodies.forEach(b => {
+         Matter.Body.applyForce(b, b.position, { 
+           x: (Math.random() - 0.5) * 0.5, 
+           y: (Math.random() - 0.5) * 0.5 
+         });
+       });
+    };
+
+    window.addEventListener('add-image', handleAddImage as EventListener);
+    window.addEventListener('clear-canvas', handleClear);
+    window.addEventListener('chaos-trigger', handleChaos);
+    
+    return () => {
+      window.removeEventListener('add-image', handleAddImage as EventListener);
+      window.removeEventListener('clear-canvas', handleClear);
+      window.removeEventListener('chaos-trigger', handleChaos);
+    };
+  }, []);
+
+  // 4. Custom Render Loop (Sync React State visuals with Matter bodies)
+  useEffect(() => {
+    if (!renderRef.current) return;
+    const render = renderRef.current;
+    
+    // Hook into Matter.js render to draw custom things (borders, labels)
+    Matter.Events.on(render, 'afterRender', () => {
+      const ctx = render.context;
+      const bodies = Array.from(bodiesMapRef.current.values());
+
+      bodies.forEach(body => {
+        const { x, y } = body.position;
+        const { w, h, category, color, url } = (body as any).customData;
+        const angle = body.angle;
+
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+
+        // A. Draw Image/Color box
+        if (isPhotoMode) {
+           // Matter.Render handles the sprite automatically if configured, 
+           // but we can override or enhance here if needed.
+           // For now, sprite is handled by Matter engine setup above.
+           // Just need to handle "BW" or filter effects if not using pure CSS on canvas
+        } else {
+          // Color Mode
+          ctx.fillStyle = isBlackAndWhite ? '#888' : color;
+          ctx.fillRect(-w/2, -h/2, w, h);
+        }
+        
+        // B. Draw Border
+        if (hasStroke) {
+          ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-w/2, -h/2, w, h);
+        }
+
+        // C. Draw Overlap Effect (Acetate)
+        if (isOverlapMode) {
+          ctx.globalCompositeOperation = document.body.classList.contains('dark') ? 'screen' : 'multiply';
+          ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+          ctx.fillRect(-w/2, -h/2, w, h);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+
+        // D. Draw Category Label
+        if (showCategoryLabels) {
+          ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
+          ctx.font = '10px "Suisse Intl"';
+          ctx.textAlign = 'center';
+          ctx.fillText(category, 0, -h/2 + 12);
+        }
+
+        ctx.rotate(-angle);
+        ctx.translate(-x, -y);
+      });
+    });
+  }, [hasStroke, isBlackAndWhite, isOverlapMode, showCategoryLabels, isPhotoMode]);
+
+  // 5. Gravity Toggle
+  useEffect(() => {
+    if (!engineRef.current) return;
+    engineRef.current.world.gravity.y = gravityEnabled ? 1 : 0;
+    // Wake up bodies
+    Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
+       if (!body.isStatic) Matter.Sleeping.set(body, false);
+    });
+  }, [gravityEnabled]);
+
+  return (
+    <div 
+      ref={sceneRef} 
+      className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-500
+        ${isBlackAndWhite ? 'grayscale' : ''}
+      `}
+    />
+  );
 };
 
 export default CanvasArea;
