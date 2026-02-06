@@ -111,8 +111,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const width = window.innerWidth;
     const wallThick = 60;
     
-    // Altezza stimata della toolbar su mobile quando aperta (360px)
-    // Quando chiusa c'è solo la barra in basso (circa 60px)
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
     const newY = height - toolbarHeight + (wallThick / 2);
 
@@ -204,27 +202,23 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       bodies.forEach(body => {
         const { x, y } = body.position;
-        // FIX QUI: rimosso 'url' che non veniva usato
         const { w, h, category, color } = (body as any).customData;
         const angle = body.angle;
 
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // A. Draw Color box (only if not Photo Mode, as sprites handle Photo Mode)
         if (!isPhotoMode) {
           ctx.fillStyle = isBlackAndWhite ? '#888' : color;
           ctx.fillRect(-w/2, -h/2, w, h);
         }
         
-        // B. Draw Border
         if (hasStroke) {
           ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
           ctx.lineWidth = 1;
           ctx.strokeRect(-w/2, -h/2, w, h);
         }
 
-        // C. Draw Overlap Effect
         if (isOverlapMode) {
           ctx.globalCompositeOperation = document.body.classList.contains('dark') ? 'screen' : 'multiply';
           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
@@ -232,7 +226,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           ctx.globalCompositeOperation = 'source-over';
         }
 
-        // D. Draw Category Label
         if (showCategoryLabels) {
           ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
           ctx.font = '10px "Suisse Intl"';
