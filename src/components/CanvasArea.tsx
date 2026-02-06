@@ -7,7 +7,6 @@ interface CanvasAreaProps {
   isPhotoMode: boolean;
   isOverlapMode: boolean;
   showCategoryLabels: boolean;
-  // currentSize rimosso perché non usato direttamente nel render
   gravityEnabled: boolean;
   isUiVisible: boolean;
   isMobile: boolean;
@@ -81,6 +80,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     });
     Matter.World.add(engine.world, mouseConstraint);
 
+    // Disable mouse scrolling interaction
     mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
@@ -111,7 +111,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const width = window.innerWidth;
     const wallThick = 60;
     
-    // Altezza stimata della toolbar su mobile quando aperta
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
     const newY = height - toolbarHeight + (wallThick / 2);
 
@@ -203,23 +202,27 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       bodies.forEach(body => {
         const { x, y } = body.position;
+        // HO RIMOSSO 'url' DA QUI PERCHÉ DAVA ERRORE
         const { w, h, category, color } = (body as any).customData;
         const angle = body.angle;
 
         ctx.translate(x, y);
         ctx.rotate(angle);
 
+        // A. Draw Color box
         if (!isPhotoMode) {
           ctx.fillStyle = isBlackAndWhite ? '#888' : color;
           ctx.fillRect(-w/2, -h/2, w, h);
         }
         
+        // B. Draw Border
         if (hasStroke) {
           ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
           ctx.lineWidth = 1;
           ctx.strokeRect(-w/2, -h/2, w, h);
         }
 
+        // C. Draw Overlap Effect
         if (isOverlapMode) {
           ctx.globalCompositeOperation = document.body.classList.contains('dark') ? 'screen' : 'multiply';
           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
@@ -227,6 +230,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           ctx.globalCompositeOperation = 'source-over';
         }
 
+        // D. Draw Category Label
         if (showCategoryLabels) {
           ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
           ctx.font = '10px "Suisse Intl"';
