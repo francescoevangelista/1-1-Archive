@@ -111,6 +111,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const width = window.innerWidth;
     const wallThick = 60;
     
+    // Altezza stimata della toolbar su mobile quando aperta (360px)
+    // Quando chiusa c'è solo la barra in basso (circa 60px)
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
     const newY = height - toolbarHeight + (wallThick / 2);
 
@@ -202,14 +204,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       bodies.forEach(body => {
         const { x, y } = body.position;
-        // HO RIMOSSO 'url' DA QUI PERCHÉ DAVA ERRORE
+        // FIX QUI: rimosso 'url' che non veniva usato
         const { w, h, category, color } = (body as any).customData;
         const angle = body.angle;
 
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // A. Draw Color box
+        // A. Draw Color box (only if not Photo Mode, as sprites handle Photo Mode)
         if (!isPhotoMode) {
           ctx.fillStyle = isBlackAndWhite ? '#888' : color;
           ctx.fillRect(-w/2, -h/2, w, h);

@@ -45,6 +45,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   
   // ════════════ MOBILE VERSION ════════════
   if (isMobile) {
+    // Barra chiusa
     if (!isVisible) {
       return (
         <div className="fixed bottom-0 left-0 w-full h-14 bg-white dark:bg-black border-t border-black dark:border-white z-50 pointer-events-auto flex justify-center items-center">
@@ -58,6 +59,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
       );
     }
 
+    // Barra aperta
     return (
       <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-black border-t border-black dark:border-white z-50 pointer-events-auto flex flex-col pb-6">
         <div 
