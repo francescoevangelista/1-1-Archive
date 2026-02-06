@@ -64,7 +64,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
         <button 
           onClick={onClose}
-          className="text-xs border border-black dark:border-white px-5 py-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all suisse-medium"
+          className="text-xs border border-black dark:border-white px-5 py-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all suisse-medium uppercase"
         >
           Chiudi
         </button>
@@ -198,9 +198,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                       alt="Uploaded"
                       className="w-full aspect-square object-cover border border-black dark:border-white" 
                     />
-                  </div>
-                  {/* Testo descrittivo rimosso come richiesto */}
-                  <div className="w-full md:w-2/3 flex flex-col justify-end h-full">
                   </div>
                 </div>
 

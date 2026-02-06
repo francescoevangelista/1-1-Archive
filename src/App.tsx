@@ -7,10 +7,9 @@ import { AppSection, Category, ImageObject } from './types';
 import { useIsMobile } from './hooks/useIsMobile';
 
 function App() {
-  // State
   const [imageCount, setImageCount] = useState(0);
   const [maxCount, setMaxCount] = useState(88);
-  const [isUiVisible, setIsUiVisible] = useState(true); // Gestisce aperto/chiuso della toolbar
+  const [isUiVisible, setIsUiVisible] = useState(true);
   const [hasStroke, setHasStroke] = useState(false);
   const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
   const [isPhotoMode, setIsPhotoMode] = useState(true);
@@ -26,14 +25,12 @@ function App() {
   
   const isMobile = useIsMobile();
   
-  // Refs
   const genIntervalRef = useRef<number | null>(null);
   const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const stateRef = useRef({ imageCount, maxCount, soundEnabled });
   const sizeRef = useRef(currentSize);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Sync refs with state
   useEffect(() => {
     stateRef.current = { imageCount, maxCount, soundEnabled };
   }, [imageCount, maxCount, soundEnabled]);
@@ -42,12 +39,10 @@ function App() {
     sizeRef.current = currentSize;
   }, [currentSize]);
 
-  // Dark mode class on body
   useEffect(() => {
     document.body.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
-  // Sound function
   const playSound = useCallback(() => {
     if (!stateRef.current.soundEnabled) return;
     try {
@@ -72,7 +67,6 @@ function App() {
     }
   }, []);
 
-  // Track mouse/touch position
   useEffect(() => {
     const onMouse = (e: MouseEvent) => {
       mousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -90,7 +84,6 @@ function App() {
     };
   }, []);
 
-  // ESC key to close overlay
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -102,7 +95,6 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Helpers
   const getCategory = (index: number): Category => {
     const safe = ((index - 1) % 88) + 1;
     if (safe <= 22) return 'AMB';
@@ -121,11 +113,9 @@ function App() {
     return colors[cat];
   };
 
-  // Add image to canvas
   const addImageToCanvas = useCallback((customUrl?: string, customLabel?: string, force = false) => {
     if (!isStarted) setIsStarted(true);
     
-    // Check limit
     if (!force && stateRef.current.imageCount >= stateRef.current.maxCount) {
       if (genIntervalRef.current) {
         clearInterval(genIntervalRef.current);
@@ -145,7 +135,6 @@ function App() {
     
     playSound();
 
-    // Calculate spawn bounds
     const size = sizeRef.current;
     const half = size / 2;
     const vw = window.innerWidth;
@@ -171,34 +160,25 @@ function App() {
     setImageCount(prev => prev + 1);
   }, [isStarted, isUiVisible, playSound]);
 
-  // Start generating images on press
   const startGenerating = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Don't generate if clicking on UI
     const target = e.target as HTMLElement;
     if (target.closest('.pointer-events-auto') && !target.closest('canvas')) return;
     
-    // Don't generate if overlay is open
     if (activeSection !== AppSection.NONE) return;
-    
-    // Don't generate if over a physics body
     if (document.body.getAttribute('data-is-over-body') === 'true') return;
 
-    // Update position
     if ('clientX' in e) {
       mousePosRef.current = { x: e.clientX, y: e.clientY };
     } else if ('touches' in e && e.touches[0]) {
       mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
 
-    // Add first image immediately
     addImageToCanvas();
     
-    // Continue generating while pressed
     if (genIntervalRef.current) clearInterval(genIntervalRef.current);
     genIntervalRef.current = window.setInterval(addImageToCanvas, 100);
   }, [addImageToCanvas, activeSection]);
 
-  // Stop generating on release
   const stopGenerating = useCallback(() => {
     if (genIntervalRef.current) {
       clearInterval(genIntervalRef.current);
@@ -206,7 +186,6 @@ function App() {
     }
   }, []);
 
-  // Handle file upload from Expand section
   const handleExpandUpload = (file: File) => {
     if (!isStarted) setIsStarted(true);
     setActiveSection(AppSection.NONE);
@@ -215,7 +194,6 @@ function App() {
     setTimeout(() => addImageToCanvas(url, 'EXP', true), 50);
   };
 
-  // Trigger chaos
   const triggerChaos = () => window.dispatchEvent(new CustomEvent('chaos-trigger'));
 
   return (
@@ -227,7 +205,6 @@ function App() {
       onTouchStart={startGenerating}
       onTouchEnd={stopGenerating}
     >
-      {/* Background counter */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <h1 
           className="text-black dark:text-white acetate-layer suisse-bold leading-none select-none tracking-tighter"
@@ -237,26 +214,23 @@ function App() {
         </h1>
       </div>
 
-      {/* Physics Canvas */}
       <CanvasArea 
         hasStroke={hasStroke} 
         isBlackAndWhite={isBlackAndWhite}
         isPhotoMode={isPhotoMode}
         isOverlapMode={isOverlapMode}
         showCategoryLabels={showCategoryLabels}
-        currentSize={currentSize}
+        // currentSize rimosso per evitare errore TS
         gravityEnabled={gravityEnabled}
         isUiVisible={isUiVisible}
         isMobile={isMobile}
       />
 
-      {/* Header (UI toggle removed from here) */}
       <Header 
         onToggleUi={() => setIsUiVisible(!isUiVisible)} 
         onOpenSection={(section) => setActiveSection(section === activeSection ? AppSection.NONE : section)}
       />
 
-      {/* Toolbar (Always rendered, handles its own minimized state) */}
       <Toolbar 
         isMobile={isMobile}
         isVisible={isUiVisible}
@@ -279,7 +253,6 @@ function App() {
           window.dispatchEvent(new CustomEvent('clear-canvas'));
         }}
         onSave={() => window.dispatchEvent(new CustomEvent('save-canvas'))}
-        // RIMOSSA LA RIGA onToggleControls CHE CAUSAVA ERRORE
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         gravityEnabled={gravityEnabled}
@@ -289,7 +262,6 @@ function App() {
         onChaos={triggerChaos}
       />
 
-      {/* Overlay */}
       {activeSection !== AppSection.NONE && (
         <Overlay 
           section={activeSection} 

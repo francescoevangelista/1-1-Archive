@@ -45,7 +45,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   
   // ════════════ MOBILE VERSION ════════════
   if (isMobile) {
-    // Stato CHIUSO: Barra orizzontale in basso con il +
     if (!isVisible) {
       return (
         <div className="fixed bottom-0 left-0 w-full h-14 bg-white dark:bg-black border-t border-black dark:border-white z-50 pointer-events-auto flex justify-center items-center">
@@ -59,11 +58,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
       );
     }
 
-    // Stato APERTO: Pannello che spinge su le immagini (gestito da CanvasArea)
     return (
       <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-black border-t border-black dark:border-white z-50 pointer-events-auto flex flex-col pb-6">
-        
-        {/* Tasto per chiudere la toolbar mobile (integrato nella barra superiore del pannello) */}
         <div 
           onClick={onToggleVisibility}
           className="w-full h-8 flex items-center justify-center border-b border-black/10 dark:border-white/10 mb-2 cursor-pointer active:bg-gray-100 dark:active:bg-zinc-900"
@@ -72,7 +68,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
         </div>
 
         <div className="px-5 flex flex-col gap-1">
-          {/* Size slider */}
           <div className="mb-4 flex flex-col gap-2">
             <div className="flex justify-between items-center">
                 <label className="text-[10px] suisse-medium opacity-60 dark:text-white uppercase tracking-wider">
@@ -93,7 +88,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             </div>
           </div>
 
-          {/* Griglia bottoni mobile - Più compatta */}
           <div className="grid grid-cols-2 gap-2">
              <ToolButton active={isPhotoMode} onClick={onTogglePhoto}>
               {isPhotoMode ? 'Render: Asset' : 'Render: Color'}
@@ -118,8 +112,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     );
   }
 
-  // ════════════ DESKTOP VERSION (Invariata ma senza ombra) ════════════
-  
+  // ════════════ DESKTOP VERSION ════════════
   if (!isVisible) {
     return (
       <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50 pointer-events-auto pl-2">
@@ -134,10 +127,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   }
 
   return (
-    // RIMOSSO shadow-2xl da qui sotto
     <div className="fixed left-5 top-1/2 -translate-y-1/2 w-64 bg-white dark:bg-black border border-black dark:border-white p-5 z-50 flex flex-col gap-1 pointer-events-auto transition-colors">
-      
-      {/* Size slider */}
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex justify-between items-center">
              <label className="text-[10px] suisse-medium opacity-60 dark:text-white uppercase tracking-wider">
@@ -145,7 +135,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             </label>
             <span className="text-[10px] suisse-medium dark:text-white">{currentSize}px</span>
         </div>
-       
         <div className="flex items-center h-6">
             <input 
             type="range" 
@@ -202,7 +191,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   );
 };
 
-// Button helper
 const ToolButton: React.FC<{ active?: boolean; onClick: () => void; children: React.ReactNode }> = ({ 
   active, onClick, children 
 }) => (
