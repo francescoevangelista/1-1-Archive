@@ -61,7 +61,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
     <div className="fixed inset-0 z-[100] bg-white dark:bg-black dark:text-white flex flex-col p-5 md:p-10 overflow-y-auto pointer-events-auto transition-colors">
       {/* Header */}
       <div className="flex justify-between items-start mb-8 md:mb-10 gap-4 pt-8 md:pt-0">
-        {/* Titolo in Medium invece che Bold */}
         <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
         <button 
           onClick={onClose}
@@ -91,7 +90,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 natura intercambiabile: convergono in una macchia indistinta.
               </p>
             </div>
-            {/* Rimossa la border-t (linea grigia) da qui sotto */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
               <div>
                 <h4 className="text-[10px] mb-3 opacity-40 uppercase tracking-widest">Crediti</h4>
@@ -201,11 +199,8 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                       className="w-full aspect-square object-cover border border-black dark:border-white" 
                     />
                   </div>
+                  {/* Testo descrittivo rimosso come richiesto */}
                   <div className="w-full md:w-2/3 flex flex-col justify-end h-full">
-                     <p className="opacity-70 text-lg">
-                       Il sistema ha identificato 10 corrispondenze visive nel database globale.
-                       La ridondanza dell'immagine supera la soglia del 90%.
-                     </p>
                   </div>
                 </div>
 

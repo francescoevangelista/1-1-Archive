@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
-import { ImageObject } from '../types';
+// Rimosso ImageObject dagli import perché non veniva usato
 
 interface CanvasAreaProps {
   hasStroke: boolean;
@@ -8,7 +8,7 @@ interface CanvasAreaProps {
   isPhotoMode: boolean;
   isOverlapMode: boolean;
   showCategoryLabels: boolean;
-  currentSize: number;
+  currentSize: number; // Manteniamo il tipo qui
   gravityEnabled: boolean;
   isUiVisible: boolean;
   isMobile: boolean;
@@ -20,7 +20,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   isPhotoMode,
   isOverlapMode,
   showCategoryLabels,
-  currentSize,
+  // Rimosso currentSize da qui perché non lo usiamo direttamente (passa tramite evento)
   gravityEnabled,
   isUiVisible,
   isMobile
@@ -110,7 +110,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, []);
 
-  // 2. PAVIMENTO DINAMICO (Logica Toolbar Mobile)
+  // 2. PAVIMENTO DINAMICO
   useEffect(() => {
     if (!wallsRef.current || !engineRef.current) return;
     
@@ -118,29 +118,21 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const width = window.innerWidth;
     const wallThick = 60;
     
-    // Se siamo su mobile e la UI è visibile, il pavimento sale
-    // Stimiamo l'altezza della toolbar aperta a circa 350px (o regolala a piacere)
-    // Se è chiusa, c'è la barra piccola (es. 60px), se vuoi che le immagini stiano sopra la barra piccola usa 60, altrimenti 0
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
-    
-    // Nuova Y del pavimento
     const newY = height - toolbarHeight + (wallThick / 2);
 
-    // Spostiamo il pavimento
     Matter.Body.setPosition(wallsRef.current.ground, {
       x: width / 2,
       y: newY
     });
 
-    // SVEGLIAMO I CORPI!
-    // Se il pavimento si muove, i corpi che dormono (isSleeping) devono svegliarsi per cadere/adattarsi
     Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
       if (!body.isStatic) {
         Matter.Sleeping.set(body, false);
       }
     });
 
-  }, [isUiVisible, isMobile]); // Si attiva quando apri/chiudi la UI
+  }, [isUiVisible, isMobile]);
 
   // 3. Handle Add Image Event
   useEffect(() => {
@@ -157,14 +149,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         render: {
           sprite: {
             texture: url,
-            xScale: size / 400, // Assuming 400px placeholder logic size
+            xScale: size / 400,
             yScale: size / 400
           }
         },
-        label: category // Store category in label for simplicity
+        label: category
       });
 
-      // Custom properties for rendering loop
       (body as any).customData = {
         id,
         url,
@@ -207,19 +198,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, []);
 
-  // 4. Custom Render Loop (Sync React State visuals with Matter bodies)
+  // 4. Custom Render Loop
   useEffect(() => {
     if (!renderRef.current) return;
     const render = renderRef.current;
     
-    // Hook into Matter.js render to draw custom things (borders, labels)
     Matter.Events.on(render, 'afterRender', () => {
       const ctx = render.context;
       const bodies = Array.from(bodiesMapRef.current.values());
 
       bodies.forEach(body => {
         const { x, y } = body.position;
-        const { w, h, category, color, url } = (body as any).customData;
+        // Rimosso 'url' che non veniva usato, risolvendo l'errore TS6133
+        const { w, h, category, color } = (body as any).customData;
         const angle = body.angle;
 
         ctx.translate(x, y);
@@ -227,10 +218,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
         // A. Draw Image/Color box
         if (isPhotoMode) {
-           // Matter.Render handles the sprite automatically if configured, 
-           // but we can override or enhance here if needed.
-           // For now, sprite is handled by Matter engine setup above.
-           // Just need to handle "BW" or filter effects if not using pure CSS on canvas
+           // handled by sprite
         } else {
           // Color Mode
           ctx.fillStyle = isBlackAndWhite ? '#888' : color;
@@ -244,7 +232,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           ctx.strokeRect(-w/2, -h/2, w, h);
         }
 
-        // C. Draw Overlap Effect (Acetate)
+        // C. Draw Overlap Effect
         if (isOverlapMode) {
           ctx.globalCompositeOperation = document.body.classList.contains('dark') ? 'screen' : 'multiply';
           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
@@ -270,7 +258,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   useEffect(() => {
     if (!engineRef.current) return;
     engineRef.current.world.gravity.y = gravityEnabled ? 1 : 0;
-    // Wake up bodies
     Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
        if (!body.isStatic) Matter.Sleeping.set(body, false);
     });
