@@ -279,7 +279,7 @@ function App() {
           window.dispatchEvent(new CustomEvent('clear-canvas'));
         }}
         onSave={() => window.dispatchEvent(new CustomEvent('save-canvas'))}
-        onToggleControls={() => setIsUiVisible(false)} // This button inside toolbar closes it
+        // RIMOSSA LA RIGA onToggleControls CHE CAUSAVA ERRORE
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         gravityEnabled={gravityEnabled}
