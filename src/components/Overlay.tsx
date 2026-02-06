@@ -59,7 +59,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
   return (
     <div className="fixed inset-0 z-[100] bg-white dark:bg-black dark:text-white flex flex-col p-5 md:p-10 overflow-y-auto pointer-events-auto transition-colors">
-      {/* Header */}
       <div className="flex justify-between items-start mb-8 md:mb-10 gap-4 pt-8 md:pt-0">
         <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
         <button 
@@ -70,10 +69,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         </button>
       </div>
 
-      {/* Content */}
       <div className="w-full flex-1 suisse-regular">
-        
-        {/* INFO */}
         {section === AppSection.INFO && (
           <div className="space-y-8 max-w-4xl">
             <div className="text-xl md:text-2xl leading-relaxed space-y-6">
@@ -107,7 +103,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
           </div>
         )}
 
-        {/* ARCHIVIO */}
         {section === AppSection.ARCHIVIO && (
           <>
             <div className="grid grid-cols-4 md:grid-cols-8 gap-1">
@@ -144,7 +139,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
           </>
         )}
 
-        {/* EXPAND */}
         {section === AppSection.EXPAND && (
           <div 
             className={`w-full h-[50vh] border-2 border-dashed flex flex-col items-center justify-center gap-6 transition-all cursor-pointer
@@ -165,7 +159,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
           </div>
         )}
 
-        {/* VERIFY */}
         {section === AppSection.UPLOAD && (
           <div className="w-full pb-20">
             {!verificationImage ? (
@@ -188,8 +181,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
               </div>
             ) : (
               <div className="flex flex-col gap-8 animate-fade-in">
-                
-                {/* Immagine caricata */}
                 <div className="flex flex-col md:flex-row gap-8 items-start border-b border-black/10 dark:border-white/10 pb-8">
                   <div className="w-full md:w-1/3">
                     <span className="text-[10px] opacity-50 uppercase block mb-2">Input Source</span>
@@ -201,7 +192,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                   </div>
                 </div>
 
-                {/* Griglia dei 10 Match */}
                 <div>
                   <span className="text-[10px] opacity-50 uppercase block mb-4">Matches Found (10)</span>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

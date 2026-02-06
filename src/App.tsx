@@ -220,6 +220,7 @@ function App() {
         isPhotoMode={isPhotoMode}
         isOverlapMode={isOverlapMode}
         showCategoryLabels={showCategoryLabels}
+        // currentSize rimosso per evitare errore TS
         gravityEnabled={gravityEnabled}
         isUiVisible={isUiVisible}
         isMobile={isMobile}
