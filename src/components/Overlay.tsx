@@ -61,10 +61,11 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
     <div className="fixed inset-0 z-[100] bg-white dark:bg-black dark:text-white flex flex-col p-5 md:p-10 overflow-y-auto pointer-events-auto transition-colors">
       {/* Header */}
       <div className="flex justify-between items-start mb-8 md:mb-10 gap-4 pt-8 md:pt-0">
-        <h2 className="text-4xl md:text-6xl suisse-bold tracking-tighter">{title}</h2>
+        {/* Titolo in Medium invece che Bold */}
+        <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
         <button 
           onClick={onClose}
-          className="text-xs border border-black dark:border-white px-5 py-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all suisse-regular uppercase"
+          className="text-xs border border-black dark:border-white px-5 py-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all suisse-medium"
         >
           Chiudi
         </button>
@@ -90,7 +91,8 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 natura intercambiabile: convergono in una macchia indistinta.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-black/10 dark:border-white/10">
+            {/* Rimossa la border-t (linea grigia) da qui sotto */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
               <div>
                 <h4 className="text-[10px] mb-3 opacity-40 uppercase tracking-widest">Crediti</h4>
                 <p className="text-base">Progetto di tesi di Francesco Evangelista</p>
@@ -158,14 +160,14 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             onDrop={handleDrop}
             onClick={handleFileClick}
           >
-            <div className="text-5xl md:text-7xl suisse-bold">Expand</div>
+            <div className="text-5xl md:text-7xl suisse-medium">Expand</div>
             <p className="text-lg text-center px-4">
               Trascina un file per aumentare la capacità dell'archivio
             </p>
           </div>
         )}
 
-        {/* VERIFY (Nuova logica Demo) */}
+        {/* VERIFY */}
         {section === AppSection.UPLOAD && (
           <div className="w-full pb-20">
             {!verificationImage ? (
@@ -181,7 +183,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 onDrop={handleDrop}
                 onClick={handleFileClick}
               >
-                <div className="text-5xl md:text-7xl suisse-bold">Verify</div>
+                <div className="text-5xl md:text-7xl suisse-medium">Verify</div>
                 <p className="text-lg text-center px-4">
                   Carica un'immagine per verificare la corrispondenza
                 </p>
@@ -189,7 +191,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             ) : (
               <div className="flex flex-col gap-8 animate-fade-in">
                 
-                {/* Immagine caricata e titolo */}
+                {/* Immagine caricata */}
                 <div className="flex flex-col md:flex-row gap-8 items-start border-b border-black/10 dark:border-white/10 pb-8">
                   <div className="w-full md:w-1/3">
                     <span className="text-[10px] opacity-50 uppercase block mb-2">Input Source</span>
@@ -200,8 +202,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                     />
                   </div>
                   <div className="w-full md:w-2/3 flex flex-col justify-end h-full">
-                     <h3 className="text-2xl md:text-4xl suisse-medium mb-2">Analisi completata</h3>
-                     <p className="opacity-70">
+                     <p className="opacity-70 text-lg">
                        Il sistema ha identificato 10 corrispondenze visive nel database globale.
                        La ridondanza dell'immagine supera la soglia del 90%.
                      </p>
@@ -213,7 +214,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                   <span className="text-[10px] opacity-50 uppercase block mb-4">Matches Found (10)</span>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     {Array.from({ length: 10 }).map((_, i) => {
-                      // Calcola percentuale finta decrescente
                       const percent = 99 - (i * 3); 
                       return (
                         <div key={i} className="flex flex-col gap-1 group">
@@ -223,7 +223,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                               alt={`Match ${i + 1}`}
                               className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                               onError={(e) => {
-                                // Fallback se non trova l'immagine nella cartella
                                 (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${i + 100}/400/400`;
                               }} 
                             />
