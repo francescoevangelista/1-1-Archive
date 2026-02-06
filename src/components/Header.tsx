@@ -6,22 +6,17 @@ interface HeaderProps {
   onOpenSection: (section: AppSection) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleUi, onOpenSection }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSection }) => {
   return (
-    <header className="fixed top-0 left-0 w-full flex justify-between items-center px-4 py-3 md:px-6 md:py-4 z-[70] pointer-events-none bg-white/80 dark:bg-black/80 backdrop-blur-sm safe-area-top">
+    // Aggiunto pt-8 su mobile (md:pt-4) per abbassare il menu rispetto al bordo superiore
+    <header className="fixed top-0 left-0 w-full flex justify-between items-center px-4 pt-8 pb-3 md:px-6 md:py-4 z-[70] pointer-events-none bg-gradient-to-b from-white/80 to-transparent dark:from-black/80 backdrop-blur-[2px] safe-area-top transition-all duration-300">
       {/* Logo */}
       <div className="text-base md:text-lg font-bold tracking-widest pointer-events-auto cursor-default dark:text-white suisse-bold whitespace-nowrap">
         1:1 Archivio
       </div>
       
-      {/* Navigation */}
+      {/* Navigation - Rimossa "UI", Upload -> Verify */}
       <nav className="flex gap-4 md:gap-5 text-sm md:text-base pointer-events-auto suisse-regular whitespace-nowrap">
-        <button 
-          onClick={onToggleUi} 
-          className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
-        >
-          UI
-        </button>
         <button 
           onClick={() => onOpenSection(AppSection.ARCHIVIO)} 
           className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
@@ -44,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleUi, onOpenSection }) => {
           onClick={() => onOpenSection(AppSection.UPLOAD)} 
           className="hover:opacity-100 opacity-70 dark:text-white transition-opacity"
         >
-          Upload
+          Verify
         </button>
       </nav>
     </header>

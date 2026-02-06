@@ -10,7 +10,7 @@ function App() {
   // State
   const [imageCount, setImageCount] = useState(0);
   const [maxCount, setMaxCount] = useState(88);
-  const [isUiVisible, setIsUiVisible] = useState(true);
+  const [isUiVisible, setIsUiVisible] = useState(true); // Gestisce aperto/chiuso della toolbar
   const [hasStroke, setHasStroke] = useState(false);
   const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
   const [isPhotoMode, setIsPhotoMode] = useState(true);
@@ -250,44 +250,44 @@ function App() {
         isMobile={isMobile}
       />
 
-      {/* Header */}
+      {/* Header (UI toggle removed from here) */}
       <Header 
         onToggleUi={() => setIsUiVisible(!isUiVisible)} 
         onOpenSection={(section) => setActiveSection(section === activeSection ? AppSection.NONE : section)}
       />
 
-      {/* Toolbar */}
-      {isUiVisible && (
-        <Toolbar 
-          isMobile={isMobile}
-          isPhotoMode={isPhotoMode}
-          onTogglePhoto={() => setIsPhotoMode(!isPhotoMode)}
-          isOverlapMode={isOverlapMode}
-          onToggleOverlap={() => setIsOverlapMode(!isOverlapMode)}
-          hasStroke={hasStroke}
-          onToggleStroke={() => setHasStroke(!hasStroke)}
-          isBlackAndWhite={isBlackAndWhite}
-          onToggleBW={() => setIsBlackAndWhite(!isBlackAndWhite)}
-          showCategoryLabels={showCategoryLabels}
-          onToggleCategory={() => setShowCategoryLabels(!showCategoryLabels)}
-          currentSize={currentSize}
-          onSizeChange={setCurrentSize}
-          onDelete={() => {
-            setImageCount(0);
-            setIsStarted(false);
-            window.dispatchEvent(new CustomEvent('clear-canvas'));
-          }}
-          onSave={() => window.dispatchEvent(new CustomEvent('save-canvas'))}
-          onToggleControls={() => setIsUiVisible(false)}
-          soundEnabled={soundEnabled}
-          onToggleSound={() => setSoundEnabled(!soundEnabled)}
-          gravityEnabled={gravityEnabled}
-          onToggleGravity={() => setGravityEnabled(!gravityEnabled)}
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-          onChaos={triggerChaos}
-        />
-      )}
+      {/* Toolbar (Always rendered, handles its own minimized state) */}
+      <Toolbar 
+        isMobile={isMobile}
+        isVisible={isUiVisible}
+        onToggleVisibility={() => setIsUiVisible(!isUiVisible)}
+        isPhotoMode={isPhotoMode}
+        onTogglePhoto={() => setIsPhotoMode(!isPhotoMode)}
+        isOverlapMode={isOverlapMode}
+        onToggleOverlap={() => setIsOverlapMode(!isOverlapMode)}
+        hasStroke={hasStroke}
+        onToggleStroke={() => setHasStroke(!hasStroke)}
+        isBlackAndWhite={isBlackAndWhite}
+        onToggleBW={() => setIsBlackAndWhite(!isBlackAndWhite)}
+        showCategoryLabels={showCategoryLabels}
+        onToggleCategory={() => setShowCategoryLabels(!showCategoryLabels)}
+        currentSize={currentSize}
+        onSizeChange={setCurrentSize}
+        onDelete={() => {
+          setImageCount(0);
+          setIsStarted(false);
+          window.dispatchEvent(new CustomEvent('clear-canvas'));
+        }}
+        onSave={() => window.dispatchEvent(new CustomEvent('save-canvas'))}
+        onToggleControls={() => setIsUiVisible(false)} // This button inside toolbar closes it
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        gravityEnabled={gravityEnabled}
+        onToggleGravity={() => setGravityEnabled(!gravityEnabled)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        onChaos={triggerChaos}
+      />
 
       {/* Overlay */}
       {activeSection !== AppSection.NONE && (

@@ -55,18 +55,18 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
     input.click();
   };
 
-  const title = section.charAt(0) + section.slice(1).toLowerCase();
+  const title = section === AppSection.UPLOAD ? 'Verify' : (section.charAt(0) + section.slice(1).toLowerCase());
 
   return (
     <div className="fixed inset-0 z-[100] bg-white dark:bg-black dark:text-white flex flex-col p-5 md:p-10 overflow-y-auto pointer-events-auto transition-colors">
       {/* Header */}
-      <div className="flex justify-between items-start mb-8 md:mb-10 gap-4">
+      <div className="flex justify-between items-start mb-8 md:mb-10 gap-4 pt-8 md:pt-0">
         <h2 className="text-4xl md:text-6xl suisse-bold tracking-tighter">{title}</h2>
         <button 
           onClick={onClose}
-          className="text-xs border border-black dark:border-white px-5 py-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all suisse-regular"
+          className="text-xs border border-black dark:border-white px-5 py-2 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all suisse-regular uppercase"
         >
-          Chiudi [Esc]
+          Chiudi
         </button>
       </div>
 
@@ -129,8 +129,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 </div>
               ))}
             </div>
-            
-            {/* Zoomed view */}
             {zoomedImage && (
               <div 
                 className="fixed inset-0 z-[110] bg-white dark:bg-black flex items-center justify-center p-8 cursor-zoom-out"
@@ -141,7 +139,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                   alt="Zoomed" 
                   className="max-w-full max-h-full object-contain border border-black dark:border-white" 
                 />
-                <span className="absolute top-5 right-5 text-xs opacity-50">Click per chiudere</span>
               </div>
             )}
           </>
@@ -165,15 +162,12 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             <p className="text-lg text-center px-4">
               Trascina un file per aumentare la capacità dell'archivio
             </p>
-            <p className="text-[10px] tracking-widest opacity-40 uppercase">
-              Ogni upload aggiunge +1 al limite
-            </p>
           </div>
         )}
 
-        {/* UPLOAD / VERIFY */}
+        {/* VERIFY (Nuova logica Demo) */}
         {section === AppSection.UPLOAD && (
-          <div className="w-full">
+          <div className="w-full pb-20">
             {!verificationImage ? (
               <div 
                 className={`w-full h-[50vh] border-2 border-dashed flex flex-col items-center justify-center gap-6 transition-all cursor-pointer
@@ -193,32 +187,62 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[10px] opacity-50 uppercase">File caricato</span>
+              <div className="flex flex-col gap-8 animate-fade-in">
+                
+                {/* Immagine caricata e titolo */}
+                <div className="flex flex-col md:flex-row gap-8 items-start border-b border-black/10 dark:border-white/10 pb-8">
+                  <div className="w-full md:w-1/3">
+                    <span className="text-[10px] opacity-50 uppercase block mb-2">Input Source</span>
                     <img 
                       src={verificationImage} 
                       alt="Uploaded"
                       className="w-full aspect-square object-cover border border-black dark:border-white" 
                     />
                   </div>
-                  <div className="md:col-span-3 grid grid-cols-3 gap-3">
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="flex flex-col gap-2" style={{ opacity: 1 - n * 0.25 }}>
-                        <span className="text-[10px] opacity-50 uppercase">Match #{n} {100 - n * 15}%</span>
-                        <img 
-                          src={`https://picsum.photos/seed/match${n}/400/400`}
-                          alt={`Match ${n}`}
-                          className="w-full aspect-square object-cover grayscale border border-black dark:border-white" 
-                        />
-                      </div>
-                    ))}
+                  <div className="w-full md:w-2/3 flex flex-col justify-end h-full">
+                     <h3 className="text-2xl md:text-4xl suisse-medium mb-2">Analisi completata</h3>
+                     <p className="opacity-70">
+                       Il sistema ha identificato 10 corrispondenze visive nel database globale.
+                       La ridondanza dell'immagine supera la soglia del 90%.
+                     </p>
                   </div>
                 </div>
+
+                {/* Griglia dei 10 Match */}
+                <div>
+                  <span className="text-[10px] opacity-50 uppercase block mb-4">Matches Found (10)</span>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {Array.from({ length: 10 }).map((_, i) => {
+                      // Calcola percentuale finta decrescente
+                      const percent = 99 - (i * 3); 
+                      return (
+                        <div key={i} className="flex flex-col gap-1 group">
+                          <div className="aspect-square overflow-hidden border border-black dark:border-white relative">
+                            <img 
+                              src={`assets/match-${i + 1}.jpg`}
+                              alt={`Match ${i + 1}`}
+                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                              onError={(e) => {
+                                // Fallback se non trova l'immagine nella cartella
+                                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${i + 100}/400/400`;
+                              }} 
+                            />
+                            <div className="absolute top-2 right-2 bg-black text-white dark:bg-white dark:text-black text-[10px] px-1">
+                              {percent}%
+                            </div>
+                          </div>
+                          <span className="text-[9px] uppercase tracking-wider opacity-60">
+                            ID_REF_{String(i + 1).padStart(3, '0')}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <button 
                   onClick={() => setVerificationImage(null)}
-                  className="self-start border border-black dark:border-white px-6 py-3 text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all uppercase"
+                  className="self-start border border-black dark:border-white px-6 py-3 text-xs hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all uppercase mt-4"
                 >
                   Nuova verifica
                 </button>
