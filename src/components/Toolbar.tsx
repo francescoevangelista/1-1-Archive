@@ -92,10 +92,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
               {isPhotoMode ? 'Render: Asset' : 'Render: Color'}
             </ToolButton>
             <ToolButton active={isOverlapMode} onClick={onToggleOverlap}>
-              {isOverlapMode ? 'Acetate: On' : 'Acetate: Off'}
+              {isOverlapMode ? 'Overlap: Acetate' : 'Overlap: Normal'}
             </ToolButton>
             <ToolButton active={hasStroke} onClick={onToggleStroke}>
-              Border: {hasStroke ? 'On' : 'Off'}
+              Border: {hasStroke ? 'Visible' : 'Hidden'}
             </ToolButton>
              <ToolButton active={gravityEnabled} onClick={onToggleGravity}>
               Physics: {gravityEnabled ? 'Gravity' : 'Float'}
@@ -150,10 +150,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
         Render: {isPhotoMode ? 'Asset' : 'Color'}
       </ToolButton>
       <ToolButton active={isOverlapMode} onClick={onToggleOverlap}>
-        Overlap: {isOverlapMode ? 'Normal' : 'Acetate'}
+        Overlap: {isOverlapMode ? 'Acetate' : 'Normal'}
       </ToolButton>
       <ToolButton active={hasStroke} onClick={onToggleStroke}>
-        Border: {hasStroke ? 'Active' : 'Hidden'}
+        Border: {hasStroke ? 'Visible' : 'Hidden'}
       </ToolButton>
       <ToolButton active={showCategoryLabels} onClick={onToggleCategory}>
         Metadata: {showCategoryLabels ? 'Visible' : 'Hidden'}

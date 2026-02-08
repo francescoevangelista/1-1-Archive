@@ -55,7 +55,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
     input.click();
   };
 
-  // Funzione per formattare il testo in Sentence case
+  // Funzione per formattare il testo: "VERIFY" -> "Verify"
   const formatTitle = (str: string) => {
       if (str === 'UPLOAD') return 'Verify';
       const lower = str.toLowerCase();
@@ -87,10 +87,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 divise in quattro categorie: Ambienti, Still Life, Figure, Graphic.
               </p>
               <p>
-                È uno strumento in continua espansione: gli utenti possono contribuire all'archivio 
-                o verificare se le proprie immagini sono già presenti nel dataset.
-              </p>
-              <p>
                 Sovrapposte su fogli di acetato trasparente, le immagini rivelano la loro 
                 natura intercambiabile, convergendo in una macchia indistinta.
               </p>
@@ -102,7 +98,6 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 <div className="space-y-1 text-sm leading-tight">
                   <p>Progetto di tesi di Francesco Evangelista</p>
                   <p>NABA Nuova Accademia di Belle Arti, Roma</p>
-                  <p>Diploma in Graphic Design e Art Direction</p>
                   <p>Marzo 2026</p>
                 </div>
               </div>
