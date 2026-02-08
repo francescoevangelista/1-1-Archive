@@ -182,7 +182,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
             link.download = `1-1-archivio-capture.png`;
             link.href = renderRef.current.canvas.toDataURL('image/png');
             link.click();
-        } catch (err) console.error(err);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const handleResizeBodies = (e: CustomEvent) => {
