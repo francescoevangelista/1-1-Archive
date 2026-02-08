@@ -4,40 +4,35 @@ import { AppSection } from '../types';
 interface HeaderProps {
   onToggleUi: () => void;
   onOpenSection: (section: AppSection) => void;
+  activeSection: AppSection;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenSection }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSection, activeSection }) => {
   return (
-    <header className="fixed top-0 left-0 w-full flex justify-between items-center px-4 pt-6 pb-2 md:px-6 md:py-4 z-[70] pointer-events-none mix-blend-difference text-white safe-area-top transition-all duration-300">
-      <div className="text-base md:text-lg tracking-tight pointer-events-auto cursor-default suisse-bold whitespace-nowrap">
+    <header className="fixed top-0 left-0 w-full flex justify-between items-center px-4 pt-4 pb-2 md:px-6 md:pt-5 md:pb-3 z-[70] pointer-events-none mix-blend-difference text-white safe-area-top transition-all duration-300">
+      <div className="text-[15px] md:text-[17px] tracking-tight pointer-events-auto cursor-default suisse-medium whitespace-nowrap leading-none">
         1:1 Archivio
       </div>
-      
-      <nav className="flex gap-4 md:gap-6 text-sm md:text-base pointer-events-auto suisse-medium whitespace-nowrap">
-        <button 
-          onClick={() => onOpenSection(AppSection.ARCHIVIO)} 
-          className="hover:underline opacity-90 transition-opacity"
-        >
-          Archivio
-        </button>
-        <button 
-          onClick={() => onOpenSection(AppSection.INFO)} 
-          className="hover:underline opacity-90 transition-opacity"
-        >
-          Info
-        </button>
-        <button 
-          onClick={() => onOpenSection(AppSection.EXPAND)} 
-          className="hover:underline opacity-90 transition-opacity"
-        >
-          Expand
-        </button>
-        <button 
-          onClick={() => onOpenSection(AppSection.UPLOAD)} 
-          className="hover:underline opacity-90 transition-opacity"
-        >
-          Verify
-        </button>
+
+      <nav className="flex gap-3 md:gap-5 text-[13px] md:text-[15px] pointer-events-auto whitespace-nowrap leading-none">
+        {([
+          { key: AppSection.ARCHIVIO, label: 'Archivio' },
+          { key: AppSection.INFO, label: 'Info' },
+          { key: AppSection.EXPAND, label: 'Expand' },
+          { key: AppSection.UPLOAD, label: 'Verify' },
+        ] as const).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => onOpenSection(key)}
+            className={`transition-all duration-200 ${
+              activeSection === key
+                ? 'suisse-medium underline underline-offset-2'
+                : 'suisse-regular opacity-80 hover:opacity-100 hover:underline hover:underline-offset-2'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
     </header>
   );

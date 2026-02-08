@@ -55,20 +55,15 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
     input.click();
   };
 
-  // Funzione per formattare il testo: "VERIFY" -> "Verify"
-  const formatTitle = (str: string) => {
-      if (str === 'UPLOAD') return 'Verify';
-      const lower = str.toLowerCase();
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-  };
+  const title = section === AppSection.UPLOAD ? 'Verify' : (section.charAt(0) + section.slice(1).toLowerCase());
 
   return (
     <div className="fixed inset-0 z-[100] bg-white/95 dark:bg-black/95 backdrop-blur-md dark:text-white flex flex-col p-4 md:p-8 overflow-y-auto pointer-events-auto transition-colors animate-fade-in">
-      <div className="flex justify-between items-center mb-12 md:mb-16 pt-2">
-        <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{formatTitle(section)}</h2>
+      <div className="flex justify-between items-center mb-10 md:mb-16 pt-2">
+        <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
         <button 
           onClick={onClose}
-          className="text-xs md:text-sm suisse-medium hover:underline"
+          className="text-sm md:text-base suisse-medium hover:underline px-2 py-1"
         >
           Close
         </button>
@@ -78,32 +73,23 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         {section === AppSection.INFO && (
           <div className="max-w-4xl">
             <div className="text-xl md:text-3xl leading-normal space-y-8 suisse-regular">
-              <p>
-                Mai nella storia sono state prodotte tante immagini.<br/>
-                Mai le immagini sono state così simili tra loro.
-              </p>
-              <p>
-                Questo archivio open source raccoglie 88 fotografie estratte dai social media, 
-                divise in quattro categorie: Ambienti, Still Life, Figure, Graphic.
-              </p>
-              <p>
-                Sovrapposte su fogli di acetato trasparente, le immagini rivelano la loro 
-                natura intercambiabile, convergendo in una macchia indistinta.
-              </p>
+              <p>Mai nella storia sono state prodotte tante immagini.<br/>Mai le immagini sono state così simili tra loro.</p>
+              <p>Questo archivio open source raccoglie 88 fotografie estratte dai social media, divise in quattro categorie: Ambienti, Still Life, Figure, Graphic.</p>
+              <p>L'archivio è progettato per essere espandibile: gli utenti possono contribuire caricando nuove immagini (Expand) o verificare l'omologazione delle proprie foto (Verify).</p>
+              <p>Sovrapposte su fogli di acetato trasparente, le immagini rivelano la loro natura intercambiabile.</p>
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-20 mt-auto">
               <div>
-                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium">Crediti</h4>
-                <div className="space-y-1 text-sm leading-tight">
+                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium uppercase">Crediti</h4>
+                <div className="space-y-1 text-sm leading-tight suisse-regular">
                   <p>Progetto di tesi di Francesco Evangelista</p>
                   <p>NABA Nuova Accademia di Belle Arti, Roma</p>
                   <p>Marzo 2026</p>
                 </div>
               </div>
               <div>
-                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium">Supervisione</h4>
-                <div className="space-y-1 text-sm leading-tight">
+                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium uppercase">Supervisione</h4>
+                <div className="space-y-1 text-sm leading-tight suisse-regular">
                   <p>Relatore: Prof. Riccardo Casinelli</p>
                   <p>Correlatrice: Prof.ssa Martina Tariciotti</p>
                 </div>
@@ -128,7 +114,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                     onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${i}/400/400` }}
                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300" 
                   />
-                  <span className="absolute bottom-0 right-0 text-[8px] suisse-mono bg-black text-white dark:bg-white dark:text-black px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute bottom-0 right-0 text-[8px] suisse-mono bg-black text-white dark:bg-white dark:text-black px-1 py-0.5 opacity-0 group-hover:opacity-100">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                 </div>
@@ -151,11 +137,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
         {(section === AppSection.EXPAND || (section === AppSection.UPLOAD && !verificationImage)) && (
           <div 
-            className={`flex-1 w-full border-2 border-dashed transition-all cursor-pointer group flex flex-col items-center justify-center gap-4
-              ${dragActive 
-                ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white' 
-                : 'border-black/30 dark:border-white/30 hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-zinc-900'
-              }`}
+            className={`flex-1 w-full border-2 border-dashed transition-all cursor-pointer group flex flex-col items-center justify-center gap-4 ${dragActive ? 'border-black dark:border-white bg-gray-50 dark:bg-zinc-900' : 'border-black/30 dark:border-white/30 hover:border-black dark:hover:border-white'}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -167,9 +149,8 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
               <h3 className="text-2xl md:text-3xl suisse-medium">
                 {section === AppSection.EXPAND ? 'Expand archive' : 'Verify image'}
               </h3>
-              <p className="text-sm suisse-regular opacity-60">
-                Drag & Drop or Click to upload
-              </p>
+              <p className="text-sm opacity-60 hidden md:block">Drag & Drop or Click to upload</p>
+              <p className="text-sm opacity-60 md:hidden">Tap to upload</p>
             </div>
           </div>
         )}
@@ -177,8 +158,8 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         {section === AppSection.UPLOAD && verificationImage && (
           <div className="flex flex-col gap-12 animate-fade-in flex-1">
             <div className="flex flex-col gap-4 items-start">
-               <span className="text-[10px] tracking-widest suisse-medium">Input source</span>
-               <img 
+              <span className="text-[10px] tracking-widest suisse-medium uppercase">Input source</span>
+              <img 
                 src={verificationImage} 
                 alt="Uploaded"
                 className="w-32 h-32 md:w-48 md:h-48 object-cover border border-black dark:border-white" 
@@ -187,8 +168,8 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
             <div className="flex-1">
               <div className="flex justify-between items-end mb-6">
-                <span className="text-[10px] tracking-widest suisse-medium">Database matches</span>
-                <span className="text-[10px] suisse-mono">10 Results found</span>
+                <span className="text-[10px] tracking-widest suisse-medium uppercase">Database matches</span>
+                <span className="text-[10px] suisse-mono">Scanning... 10 Results found</span>
               </div>
               
               <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-4">
@@ -215,10 +196,10 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
               </div>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 pb-8">
               <button 
                 onClick={() => setVerificationImage(null)}
-                className="suisse-medium text-xs tracking-wider hover:underline"
+                className="suisse-medium text-xs hover:underline"
               >
                 Scan new image
               </button>

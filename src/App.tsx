@@ -10,12 +10,15 @@ function App() {
   const [imageCount, setImageCount] = useState(0);
   const [maxCount, setMaxCount] = useState(88);
   const [isUiVisible, setIsUiVisible] = useState(true);
+  
+  // Stati Toolbar
   const [hasStroke, setHasStroke] = useState(false);
   const [isBlackAndWhite, setIsBlackAndWhite] = useState(false);
   const [isPhotoMode, setIsPhotoMode] = useState(true);
   const [isOverlapMode, setIsOverlapMode] = useState(false);
   const [showCategoryLabels, setShowCategoryLabels] = useState(true);
-  const [currentSize, setCurrentSize] = useState(() => window.innerWidth < 768 ? 70 : 100);
+  const [currentSize, setCurrentSize] = useState(() => window.innerWidth < 768 ? 80 : 120);
+  
   const [activeSection, setActiveSection] = useState<AppSection>(AppSection.NONE);
   const [isStarted, setIsStarted] = useState(false);
   
@@ -27,21 +30,29 @@ function App() {
   
   const genIntervalRef = useRef<number | null>(null);
   const mousePosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  const isDraggingBodyRef = useRef(false); 
   const stateRef = useRef({ imageCount, maxCount, soundEnabled });
   const sizeRef = useRef(currentSize);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  useEffect(() => {
-    stateRef.current = { imageCount, maxCount, soundEnabled };
-  }, [imageCount, maxCount, soundEnabled]);
+  // Sync Refs
+  useEffect(() => { stateRef.current = { imageCount, maxCount, soundEnabled }; }, [imageCount, maxCount, soundEnabled]);
+  useEffect(() => { sizeRef.current = currentSize; }, [currentSize]);
+  
+  // Tema Scuro
+  useEffect(() => { document.body.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
 
+  // Listener per Dragging dal Canvas (per non generare mentre sposti)
   useEffect(() => {
-    sizeRef.current = currentSize;
-  }, [currentSize]);
-
-  useEffect(() => {
-    document.body.classList.toggle('dark', isDarkMode);
-  }, [isDarkMode]);
+    const startDrag = () => { isDraggingBodyRef.current = true; };
+    const endDrag = () => { isDraggingBodyRef.current = false; };
+    window.addEventListener('body-drag-start', startDrag);
+    window.addEventListener('body-drag-end', endDrag);
+    return () => {
+        window.removeEventListener('body-drag-start', startDrag);
+        window.removeEventListener('body-drag-end', endDrag);
+    };
+  }, []);
 
   const handleSizeChange = (newSize: number) => {
       setCurrentSize(newSize);
@@ -51,10 +62,9 @@ function App() {
   const playSound = useCallback(() => {
     if (!stateRef.current.soundEnabled) return;
     try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       const ctx = audioCtxRef.current;
+      if (!ctx) return;
       if (ctx.state === 'suspended') ctx.resume();
       
       const osc = ctx.createOscillator();
@@ -62,141 +72,101 @@ function App() {
       osc.type = 'square';
       osc.frequency.setValueAtTime(800 + Math.random() * 400, ctx.currentTime);
       gain.gain.setValueAtTime(0.03, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.06);
-    } catch (e) {
-      console.warn('Audio error:', e);
-    }
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) { console.warn(e); }
   }, []);
 
+  // Tracking Mouse/Touch
   useEffect(() => {
-    const onMouse = (e: MouseEvent) => {
-      mousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-    const onTouch = (e: TouchEvent) => {
-      if (e.touches[0]) {
-        mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      let cx, cy;
+      if ('touches' in e) {
+          cx = e.touches[0].clientX;
+          cy = e.touches[0].clientY;
+      } else {
+          cx = (e as MouseEvent).clientX;
+          cy = (e as MouseEvent).clientY;
       }
+      mousePosRef.current = { x: cx, y: cy };
     };
-    window.addEventListener('mousemove', onMouse);
-    window.addEventListener('touchmove', onTouch, { passive: true });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: true });
     return () => {
-      window.removeEventListener('mousemove', onMouse);
-      window.removeEventListener('touchmove', onTouch);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onMove);
     };
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setActiveSection(AppSection.NONE);
-        window.dispatchEvent(new CustomEvent('close-zoomed-view'));
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  const getCategory = (index: number): Category => {
-    const safe = ((index - 1) % 88) + 1;
-    if (safe <= 22) return 'AMB';
-    if (safe <= 44) return 'STL';
-    if (safe <= 66) return 'FIG';
-    return 'GRA';
-  };
-
-  const getColor = (cat: Category): string => {
-    const colors: Record<Category, string> = { 
-      AMB: '#D4C5B0', 
-      STL: '#B8A898', 
-      FIG: '#9CAF88', 
-      GRA: '#4A4A4A',
-      EXP: '#E5E5E5'
-    };
-    return colors[cat];
-  };
-
-  const addImageToCanvas = useCallback((customUrl?: string, customLabel?: string, force = false) => {
+  const addImageToCanvas = useCallback((customUrl?: string, customLabel?: string, forceCenter = false) => {
     if (!isStarted) setIsStarted(true);
     
-    if (!force && stateRef.current.imageCount >= stateRef.current.maxCount) {
-      if (genIntervalRef.current) {
-        clearInterval(genIntervalRef.current);
-        genIntervalRef.current = null;
-      }
+    if (!customUrl && stateRef.current.imageCount >= stateRef.current.maxCount) {
+      if (genIntervalRef.current) clearInterval(genIntervalRef.current);
       return;
     }
 
     const id = (stateRef.current.imageCount % 88) + 1;
-    const cat = getCategory(id);
-    let finalCategory = cat;
-    if (customLabel) finalCategory = customLabel as Category;
+    let category: Category = 'GRA';
+    if (((id - 1) % 88) < 22) category = 'AMB';
+    else if (((id - 1) % 88) < 44) category = 'STL';
+    else if (((id - 1) % 88) < 66) category = 'FIG';
+
+    const finalCat = customLabel ? (customLabel as Category) : category;
+    
+    const colors: Record<string, string> = { AMB: '#D4C5B0', STL: '#B8A898', FIG: '#9CAF88', GRA: '#4A4A4A', EXP: '#E5E5E5' };
 
     const imgObj: ImageObject = {
       id,
       url: customUrl || `assets/img-${id}.png`,
-      category: finalCategory,
-      averageColor: getColor(finalCategory)
+      category: finalCat,
+      averageColor: colors[finalCat] || '#ccc'
     };
     
     playSound();
 
-    const size = sizeRef.current;
-    
-    // FIX MOBILE: Se è un upload forzato (Expand), usa il centro dello schermo
-    // altrimenti usa la posizione del mouse
     let x, y;
-    
-    if (force) {
+    if (forceCenter) {
         x = window.innerWidth / 2;
-        y = window.innerHeight / 2;
+        y = window.innerHeight / 3;
     } else {
-        const half = size / 2;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const mobile = vw < 768;
+        x = mousePosRef.current.x;
+        y = mousePosRef.current.y;
         
-        const headerH = 60;
-        const toolbarH = (mobile && isUiVisible) ? 300 : 0; // Spazio sicuro toolbar
-        const sidebarW = (!mobile && isUiVisible) ? 280 : 0;
-        
-        const left = sidebarW + half + 10;
-        const right = vw - half - 10;
-        const top = headerH + half + 10;
-        const bottom = vh - toolbarH - half - 10;
-
-        x = Math.max(left, Math.min(right, mousePosRef.current.x));
-        y = Math.max(top, Math.min(bottom, mousePosRef.current.y));
+        const pad = sizeRef.current / 2 + 20;
+        x = Math.max(pad, Math.min(window.innerWidth - pad, x));
+        y = Math.max(pad, Math.min(window.innerHeight - pad, y));
     }
 
     window.dispatchEvent(new CustomEvent('add-image', { 
-      detail: { image: imgObj, size, x, y } 
+      detail: { image: imgObj, size: sizeRef.current, x, y } 
     }));
     
     setImageCount(prev => prev + 1);
-  }, [isStarted, isUiVisible, playSound]);
+  }, [isStarted, playSound]);
 
   const startGenerating = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Se clicco su un elemento dell'interfaccia, non generare
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('.pointer-events-auto')) return;
-    
-    // Se sto cliccando sull'overlay, esci
     if (activeSection !== AppSection.NONE) return;
+    
+    if (isDraggingBodyRef.current) return;
 
-    if ('clientX' in e) {
-      mousePosRef.current = { x: e.clientX, y: e.clientY };
-    } else if ('touches' in e && e.touches[0]) {
-      mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    if ('touches' in e) {
+       mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+       mousePosRef.current = { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
     }
 
     addImageToCanvas();
     
     if (genIntervalRef.current) clearInterval(genIntervalRef.current);
-    genIntervalRef.current = window.setInterval(() => addImageToCanvas(), 100);
+    genIntervalRef.current = window.setInterval(() => {
+        if (!isDraggingBodyRef.current) addImageToCanvas();
+    }, 120);
   }, [addImageToCanvas, activeSection]);
 
   const stopGenerating = useCallback(() => {
@@ -207,11 +177,10 @@ function App() {
   }, []);
 
   const handleExpandUpload = (file: File) => {
-    if (!isStarted) setIsStarted(true);
+    setIsStarted(true);
     setActiveSection(AppSection.NONE);
     const url = URL.createObjectURL(file);
     setMaxCount(prev => prev + 1);
-    // Ritardo per assicurarsi che l'overlay sia chiuso
     setTimeout(() => addImageToCanvas(url, 'EXP', true), 300);
   };
 
@@ -227,10 +196,8 @@ function App() {
       onTouchEnd={stopGenerating}
     >
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-        <h1 
-          className="text-black dark:text-white acetate-layer suisse-bold leading-none select-none tracking-tighter"
-          style={{ fontSize: 'clamp(4rem, 35vw, 70rem)' }}
-        >
+        <h1 className="text-black dark:text-white acetate-layer suisse-bold leading-none select-none tracking-tighter"
+            style={{ fontSize: 'clamp(4rem, 35vw, 70rem)' }}>
           {!isStarted ? '1:1' : `${String(imageCount).padStart(2, '0')}/${maxCount}`}
         </h1>
       </div>
@@ -244,11 +211,13 @@ function App() {
         gravityEnabled={gravityEnabled}
         isUiVisible={isUiVisible}
         isMobile={isMobile}
+        isDarkMode={isDarkMode}
       />
 
       <Header 
         onToggleUi={() => setIsUiVisible(!isUiVisible)} 
         onOpenSection={(section) => setActiveSection(section === activeSection ? AppSection.NONE : section)}
+        activeSection={activeSection} 
       />
 
       <Toolbar 

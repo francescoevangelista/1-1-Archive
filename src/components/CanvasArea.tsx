@@ -10,7 +10,17 @@ interface CanvasAreaProps {
   gravityEnabled: boolean;
   isUiVisible: boolean;
   isMobile: boolean;
+  isDarkMode: boolean;
 }
+
+// Cache immagini per evitare sfarfallii
+const imageCache = new Map<string, HTMLImageElement>();
+const loadImage = (url: string) => {
+  if (imageCache.has(url)) return;
+  const img = new Image();
+  img.src = url;
+  img.onload = () => imageCache.set(url, img);
+};
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({
   hasStroke,
@@ -20,15 +30,25 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   showCategoryLabels,
   gravityEnabled,
   isUiVisible,
-  isMobile
+  isMobile,
+  isDarkMode
 }) => {
   const sceneRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Matter.Engine | null>(null);
   const renderRef = useRef<Matter.Render | null>(null);
   const wallsRef = useRef<{ [key: string]: Matter.Body } | null>(null);
   const bodiesMapRef = useRef<Map<number, Matter.Body>>(new Map());
+  
+  // Refs per i props che cambiano spesso (per usarli dentro il loop di render senza riavviare)
+  const propsRef = useRef({ 
+    hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, showCategoryLabels, isDarkMode 
+  });
 
-  // 1. Setup Engine
+  useEffect(() => {
+    propsRef.current = { hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, showCategoryLabels, isDarkMode };
+  }, [hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, showCategoryLabels, isDarkMode]);
+
+  // 1. Inizializzazione Motore (Eseguito UNA volta sola)
   useEffect(() => {
     if (!sceneRef.current) return;
 
@@ -47,20 +67,21 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       }
     });
 
-    const wallThick = 60;
+    // Muri invisibili
+    const wallThick = 200; // Muri spessi per evitare che gli oggetti scappino
     const width = window.innerWidth;
     const height = window.innerHeight;
     const wallOptions = { isStatic: true, render: { visible: false }, friction: 0.5 };
 
-    const ground = Matter.Bodies.rectangle(width / 2, height + wallThick / 2 - 10, width, wallThick, { ...wallOptions, label: 'ground' });
-    const leftWall = Matter.Bodies.rectangle(0 - wallThick / 2, height / 2, wallThick, height * 5, { ...wallOptions, label: 'wall' });
-    const rightWall = Matter.Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 5, { ...wallOptions, label: 'wall' });
-    const ceiling = Matter.Bodies.rectangle(width / 2, -wallThick * 4, width, wallThick, { ...wallOptions, label: 'ceiling' });
+    const ground = Matter.Bodies.rectangle(width / 2, height + wallThick/2, width * 2, wallThick, { ...wallOptions, label: 'ground' });
+    const leftWall = Matter.Bodies.rectangle(0 - wallThick/2, height / 2, wallThick, height * 5, { ...wallOptions, label: 'wall' });
+    const rightWall = Matter.Bodies.rectangle(width + wallThick/2, height / 2, wallThick, height * 5, { ...wallOptions, label: 'wall' });
+    const ceiling = Matter.Bodies.rectangle(width / 2, -wallThick * 2, width * 2, wallThick, { ...wallOptions, label: 'ceiling' });
 
     wallsRef.current = { ground, leftWall, rightWall, ceiling };
     Matter.World.add(engine.world, [ground, leftWall, rightWall, ceiling]);
 
-    // Setup Mouse
+    // Mouse Interaction
     const mouse = Matter.Mouse.create(render.canvas);
     mouse.pixelRatio = window.devicePixelRatio;
     const mouseConstraint = Matter.MouseConstraint.create(engine, {
@@ -69,19 +90,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     });
     Matter.World.add(engine.world, mouseConstraint);
 
-    // FIX: Blocca la generazione quando si clicca/trascina un oggetto
-    Matter.Events.on(mouseConstraint, 'mousedown', (event: any) => {
-        const mousePosition = event.mouse.position;
-        const bodies = Matter.Composite.allBodies(engine.world);
-        const clickedBody = Matter.Query.point(bodies, mousePosition).find(b => !b.isStatic);
-        
-        if (clickedBody) {
-            // Blocca la propagazione dell'evento all'App (che altrimenti genererebbe una nuova immagine)
-            if (event.sourceEvents.mousedown) event.sourceEvents.mousedown.stopPropagation();
-            if (event.sourceEvents.touchstart) event.sourceEvents.touchstart.stopPropagation();
-        }
+    // Eventi Drag (fondamentali per bloccare la generazione in App.tsx)
+    Matter.Events.on(mouseConstraint, 'startdrag', () => {
+        window.dispatchEvent(new CustomEvent('body-drag-start'));
+    });
+    Matter.Events.on(mouseConstraint, 'enddrag', () => {
+        window.dispatchEvent(new CustomEvent('body-drag-end'));
     });
 
+    // Rimuovi scroll indesiderato
     mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
@@ -92,15 +109,20 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     engineRef.current = engine;
     renderRef.current = render;
 
+    // Resize Handler nativo
     const handleResize = () => {
       if (!render.canvas || !wallsRef.current) return;
-      render.canvas.width = window.innerWidth * window.devicePixelRatio;
-      render.canvas.height = window.innerHeight * window.devicePixelRatio;
-      render.options.width = window.innerWidth;
-      render.options.height = window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
       
-      Matter.Body.setPosition(wallsRef.current.rightWall, { x: window.innerWidth + 30, y: window.innerHeight / 2 });
-      Matter.Body.setPosition(wallsRef.current.ground, { x: window.innerWidth / 2, y: window.innerHeight + 30 });
+      render.canvas.width = w * window.devicePixelRatio;
+      render.canvas.height = h * window.devicePixelRatio;
+      render.options.width = w;
+      render.options.height = h;
+      
+      Matter.Body.setPosition(wallsRef.current.rightWall, { x: w + 100, y: h / 2 });
+      Matter.Body.setPosition(wallsRef.current.ground, { x: w / 2, y: h + 100 });
+      Matter.Body.setPosition(wallsRef.current.ceiling, { x: w / 2, y: -200 });
     };
     window.addEventListener('resize', handleResize);
 
@@ -115,46 +137,48 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, []);
 
-  // 2. Pavimento Dinamico (per mobile)
+  // 2. Aggiornamento Muri Dinamico (Toolbar Mobile)
   useEffect(() => {
     if (!wallsRef.current || !engineRef.current) return;
-    const height = window.innerHeight;
-    const width = window.innerWidth;
-    const wallThick = 60;
-    // Quando la UI è visibile su mobile, alziamo il pavimento per non nascondere le foto
-    const toolbarHeight = isMobile && isUiVisible ? 280 : (isMobile ? 60 : 0); 
-    const newY = height - toolbarHeight + (wallThick / 2);
+    const h = window.innerHeight;
+    const w = window.innerWidth;
+    
+    // Calcoliamo la posizione del pavimento in base alla toolbar
+    // Se è mobile e UI visibile, alziamo il pavimento
+    const toolbarOffset = (isMobile && isUiVisible) ? 320 : 0; 
+    const wallThick = 200;
+    
+    // Posizioniamo il pavimento appena sotto l'area visibile o sopra la toolbar
+    const groundY = h - toolbarOffset + (wallThick / 2);
 
-    Matter.Body.setPosition(wallsRef.current.ground, { x: width / 2, y: newY });
+    Matter.Body.setPosition(wallsRef.current.ground, { x: w / 2, y: groundY });
+    
+    // Svegliamo i corpi per farli reagire al nuovo pavimento
     Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
       if (!body.isStatic) Matter.Sleeping.set(body, false);
     });
   }, [isUiVisible, isMobile]);
 
-  // 3. Gestione Eventi (Add, Clear, Chaos, Save)
+  // 3. Event Listeners (Add, Clear, ecc.)
   useEffect(() => {
     const handleAddImage = (e: CustomEvent) => {
       if (!engineRef.current) return;
       const { image, size, x, y } = e.detail;
       const { id, url, category, averageColor } = image;
 
+      loadImage(url); // Preload
+
+      // BODY FISICO
       const body = Matter.Bodies.rectangle(x, y, size, size, {
-        chamfer: { radius: 0 }, // Raggio 0 per evitare "quadrati interni" e bordi doppi
+        chamfer: { radius: 0 }, // ESSENZIALE: Rimuove il "quadrato interno"
         restitution: 0.4,
         friction: 0.1,
         frictionAir: 0.02,
-        render: {
-            visible: isPhotoMode, 
-            sprite: {
-                texture: url,
-                xScale: size / 400,
-                yScale: size / 400
-            }
-        },
+        render: { visible: false }, // Non facciamo disegnare nulla a Matter
         label: category
       });
 
-      (body as any).customData = { id, category, color: averageColor, w: size, h: size };
+      (body as any).customData = { id, category, color: averageColor, w: size, h: size, url };
       bodiesMapRef.current.set(body.id, body);
       Matter.World.add(engineRef.current.world, body);
     };
@@ -171,17 +195,33 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
        const bodies = Array.from(bodiesMapRef.current.values());
        bodies.forEach(b => {
          const force = 0.05 * b.mass;
-         Matter.Body.applyForce(b, b.position, { x: (Math.random() - 0.5) * force, y: (Math.random() - 0.8) * force });
+         Matter.Body.applyForce(b, b.position, { 
+            x: (Math.random() - 0.5) * force, 
+            y: (Math.random() - 0.8) * force 
+         });
        });
     };
 
     const handleSave = () => {
         if (!renderRef.current || !renderRef.current.canvas) return;
         try {
-            const link = document.createElement('a');
-            link.download = `capture-${Date.now()}.png`;
-            link.href = renderRef.current.canvas.toDataURL('image/png');
-            link.click();
+            // Creiamo un canvas temporaneo per gestire lo sfondo
+            const originalCanvas = renderRef.current.canvas;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = originalCanvas.width;
+            tempCanvas.height = originalCanvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            if(ctx) {
+                // Sfondo corretto in base al tema
+                ctx.fillStyle = document.body.classList.contains('dark') ? '#000' : '#FFF';
+                ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                ctx.drawImage(originalCanvas, 0, 0);
+                
+                const link = document.createElement('a');
+                link.download = `archivio-capture.png`;
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+            }
         } catch (err) { console.error(err); }
     };
 
@@ -193,10 +233,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
             Matter.Body.scale(body, scale, scale);
             (body as any).customData.w = newSize;
             (body as any).customData.h = newSize;
-            if (body.render.sprite) {
-                body.render.sprite.xScale = newSize / 400;
-                body.render.sprite.yScale = newSize / 400;
-            }
         });
     };
 
@@ -213,9 +249,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       window.removeEventListener('save-canvas', handleSave);
       window.removeEventListener('resize-bodies', handleResizeBodies as EventListener);
     };
-  }, [isPhotoMode]);
+  }, []);
 
-  // 4. Render Custom (SOLUZIONE GRAFICA COMPLETA)
+  // 4. CUSTOM RENDER LOOP (La parte grafica corretta)
   useEffect(() => {
     if (!renderRef.current) return;
     const render = renderRef.current;
@@ -223,6 +259,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const customRender = () => {
       const ctx = render.context;
       if (!ctx) return;
+      
+      const { hasStroke, isBlackAndWhite, isPhotoMode, isOverlapMode, showCategoryLabels, isDarkMode } = propsRef.current;
       const bodies = Array.from(bodiesMapRef.current.values());
 
       bodies.forEach(body => {
@@ -230,36 +268,52 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         const customData = (body as any).customData;
         if (!customData) return;
         
-        const { w, h, category, color } = customData;
+        const { w, h, category, color, url } = customData;
         const angle = body.angle;
 
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // Se non è photo mode, disegniamo il rettangolo colorato
-        if (!isPhotoMode) {
-          ctx.fillStyle = isBlackAndWhite ? '#333' : color;
-          ctx.fillRect(-w/2, -h/2, w, h);
-        }
-        
-        // Acetate Mode: Disegna sopra l'immagine (intero riquadro)
+        // IMPOSTAZIONI ACETATO
         if (isOverlapMode) {
-           ctx.globalCompositeOperation = 'multiply';
-           // Colore leggero per simulare l'acetato
-           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(220, 210, 200, 0.4)' : 'rgba(40, 30, 20, 0.2)';
-           ctx.fillRect(-w/2, -h/2, w, h);
-           ctx.globalCompositeOperation = 'source-over';
+           ctx.globalCompositeOperation = 'multiply'; 
+           ctx.globalAlpha = 0.85; // Leggera trasparenza per blending
         }
 
-        // Bordo (Stroke): Segue il perimetro esatto
+        // DISEGNO CONTENUTO (Foto o Colore)
+        const drawX = -w / 2;
+        const drawY = -h / 2;
+
+        if (isPhotoMode && url) {
+            const img = imageCache.get(url);
+            if (img) {
+                if (isBlackAndWhite) ctx.filter = 'grayscale(100%)';
+                ctx.drawImage(img, drawX, drawY, w, h);
+                ctx.filter = 'none'; // Reset filtro
+            } else {
+                // Fallback colore mentre carica
+                ctx.fillStyle = '#ccc';
+                ctx.fillRect(drawX, drawY, w, h);
+            }
+        } else {
+            // Render Color Mode
+            ctx.fillStyle = isBlackAndWhite ? '#333' : color;
+            ctx.fillRect(drawX, drawY, w, h);
+        }
+
+        // Reset Composite per le etichette e i bordi (che devono essere nitidi)
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1.0;
+
+        // BORDI (Stroke)
         if (hasStroke) {
-          ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
+          ctx.strokeStyle = isDarkMode ? '#FFF' : '#000';
           ctx.lineWidth = 1;
-          ctx.strokeRect(-w/2, -h/2, w, h);
+          ctx.strokeRect(drawX, drawY, w, h);
         }
 
-        // Etichette: Top-Left interno
+        // ETICHETTE (Metadati)
         if (showCategoryLabels) {
           const fontSize = 9;
           ctx.font = `${fontSize}px "Suisse Intl Mono", monospace`;
@@ -268,15 +322,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
           
           const text = category;
           const textWidth = ctx.measureText(text).width;
-          const pad = 3; 
+          const pad = 4;
           
+          // Posizione: Alto a sinistra, interno
+          const labelX = drawX;
+          const labelY = drawY;
+
           // Sfondo etichetta
-          ctx.fillStyle = document.body.classList.contains('dark') ? '#000' : '#FFF';
-          ctx.fillRect(-w/2, -h/2, textWidth + pad*2, fontSize + pad*2);
+          ctx.fillStyle = isDarkMode ? '#000' : '#FFF';
+          ctx.fillRect(labelX, labelY, textWidth + pad*2, fontSize + pad*1.5);
           
-          // Testo etichetta
-          ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          ctx.fillText(text, -w/2 + pad, -h/2 + pad);
+          // Testo
+          ctx.fillStyle = isDarkMode ? '#FFF' : '#000';
+          ctx.fillText(text, labelX + pad, labelY + 2);
         }
 
         ctx.restore();
@@ -288,7 +346,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         Matter.Events.off(render, 'afterRender', customRender);
     };
 
-  }, [hasStroke, isBlackAndWhite, isOverlapMode, showCategoryLabels, isPhotoMode]);
+  }, []); // Dipendenze vuote, usiamo propsRef
 
   // 5. Gravità
   useEffect(() => {
@@ -302,7 +360,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   return (
     <div 
       ref={sceneRef} 
-      className={`absolute inset-0 z-10 transition-opacity duration-500 ${isBlackAndWhite ? 'grayscale' : ''}`}
+      className="absolute inset-0 z-10 touch-none" // touch-none essenziale per mobile
     />
   );
 };
