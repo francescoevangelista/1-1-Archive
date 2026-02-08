@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 
-// NOTA: Ho rimosso ImageObject dagli import per fixare l'errore TS6133
+// Rimosso import ImageObject inutilizzato
 
 interface CanvasAreaProps {
   hasStroke: boolean;
@@ -82,6 +82,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     });
     Matter.World.add(engine.world, mouseConstraint);
 
+    // Fix event listeners passive warning
     mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
@@ -112,6 +113,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const width = window.innerWidth;
     const wallThick = 60;
     
+    // isMobile e isUiVisible sono usati qui, quindi non daranno errore
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
     const newY = height - toolbarHeight + (wallThick / 2);
 
@@ -152,11 +154,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       (body as any).customData = {
         id,
-        // url rimosso da qui per evitare errore TS6133
         category,
         color: averageColor,
         w: size,
         h: size
+        // Nota: 'url' non viene salvato qui perché non serve nel render loop successivo
       };
 
       bodiesMapRef.current.set(body.id, body);
@@ -203,7 +205,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       bodies.forEach(body => {
         const { x, y } = body.position;
-        // FIX CRITICO: Ho rimosso 'url' dalla lista qui sotto perché dava errore TS6133
+        // Qui estraiamo solo quello che usiamo. 'url' è stato rimosso per evitare errori.
         const { w, h, category, color } = (body as any).customData;
         const angle = body.angle;
 
