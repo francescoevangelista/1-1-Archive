@@ -43,6 +43,13 @@ function App() {
     document.body.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
+  // Gestione Resize Real-time
+  const handleSizeChange = (newSize: number) => {
+      setCurrentSize(newSize);
+      // Invia evento al Canvas per ridimensionare i corpi esistenti
+      window.dispatchEvent(new CustomEvent('resize-bodies', { detail: newSize }));
+  };
+
   const playSound = useCallback(() => {
     if (!stateRef.current.soundEnabled) return;
     try {
@@ -109,7 +116,7 @@ function App() {
       STL: '#B8A898', 
       FIG: '#9CAF88', 
       GRA: '#4A4A4A',
-      EXP: '#E5E5E5' // Aggiunto EXP per risolvere l'errore TS
+      EXP: '#E5E5E5'
     };
     return colors[cat];
   };
@@ -128,7 +135,6 @@ function App() {
     const id = (stateRef.current.imageCount % 88) + 1;
     const cat = getCategory(id);
     
-    // Gestione sicura della categoria per immagini caricate
     let finalCategory = cat;
     if (customLabel) {
         finalCategory = customLabel as Category;
@@ -253,7 +259,7 @@ function App() {
         showCategoryLabels={showCategoryLabels}
         onToggleCategory={() => setShowCategoryLabels(!showCategoryLabels)}
         currentSize={currentSize}
-        onSizeChange={setCurrentSize}
+        onSizeChange={handleSizeChange} // Colleghiamo la nuova funzione qui
         onDelete={() => {
           setImageCount(0);
           setIsStarted(false);
