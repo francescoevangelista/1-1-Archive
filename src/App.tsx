@@ -44,7 +44,14 @@ function App() {
 
   // Listener per Dragging dal Canvas (per non generare mentre sposti)
   useEffect(() => {
-    const startDrag = () => { isDraggingBodyRef.current = true; };
+    const startDrag = () => { 
+        isDraggingBodyRef.current = true; 
+        // Se stavo generando, fermo tutto immediatamente
+        if (genIntervalRef.current) {
+            clearInterval(genIntervalRef.current);
+            genIntervalRef.current = null;
+        }
+    };
     const endDrag = () => { isDraggingBodyRef.current = false; };
     window.addEventListener('body-drag-start', startDrag);
     window.addEventListener('body-drag-end', endDrag);
@@ -104,6 +111,9 @@ function App() {
   const addImageToCanvas = useCallback((customUrl?: string, customLabel?: string, forceCenter = false) => {
     if (!isStarted) setIsStarted(true);
     
+    // Controllo Dragging anche qui per sicurezza
+    if (!forceCenter && isDraggingBodyRef.current) return;
+
     if (!customUrl && stateRef.current.imageCount >= stateRef.current.maxCount) {
       if (genIntervalRef.current) clearInterval(genIntervalRef.current);
       return;
@@ -136,7 +146,8 @@ function App() {
         x = mousePosRef.current.x;
         y = mousePosRef.current.y;
         
-        const pad = sizeRef.current / 2 + 20;
+        // Clamp per evitare spawn nei muri o fuori schermo
+        const pad = sizeRef.current / 2 + 10;
         x = Math.max(pad, Math.min(window.innerWidth - pad, x));
         y = Math.max(pad, Math.min(window.innerHeight - pad, y));
     }
@@ -150,23 +161,41 @@ function App() {
 
   const startGenerating = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const target = e.target as HTMLElement;
+    // Ignora click su UI
     if (target.closest('button') || target.closest('.pointer-events-auto')) return;
     if (activeSection !== AppSection.NONE) return;
     
-    if (isDraggingBodyRef.current) return;
-
+    // Aggiorna posizione
     if ('touches' in e) {
        mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     } else {
        mousePosRef.current = { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
     }
 
-    addImageToCanvas();
-    
-    if (genIntervalRef.current) clearInterval(genIntervalRef.current);
-    genIntervalRef.current = window.setInterval(() => {
-        if (!isDraggingBodyRef.current) addImageToCanvas();
-    }, 120);
+    // Se stiamo trascinando un corpo, NON iniziare la generazione
+    // Diamo un micro-delay per permettere a Matter.js di rilevare il drag
+    setTimeout(() => {
+        if (isDraggingBodyRef.current) return;
+
+        // Genera la PRIMA immagine subito
+        addImageToCanvas();
+        
+        // Pulisci intervalli esistenti per sicurezza
+        if (genIntervalRef.current) clearInterval(genIntervalRef.current);
+        
+        // Avvia generazione continua (Hold)
+        genIntervalRef.current = window.setInterval(() => {
+            // Controlla costantemente se abbiamo iniziato a trascinare
+            if (isDraggingBodyRef.current) {
+                if (genIntervalRef.current) {
+                    clearInterval(genIntervalRef.current);
+                    genIntervalRef.current = null;
+                }
+                return;
+            }
+            addImageToCanvas();
+        }, 150); // Velocità di generazione
+    }, 10); // Ritardo impercettibile ma necessario per il flag drag
   }, [addImageToCanvas, activeSection]);
 
   const stopGenerating = useCallback(() => {
@@ -217,7 +246,7 @@ function App() {
       <Header 
         onToggleUi={() => setIsUiVisible(!isUiVisible)} 
         onOpenSection={(section) => setActiveSection(section === activeSection ? AppSection.NONE : section)}
-        activeSection={activeSection} 
+        activeSection={activeSection}
       />
 
       <Toolbar 
