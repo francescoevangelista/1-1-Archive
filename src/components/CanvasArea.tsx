@@ -263,3 +263,4 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 };
 
 export default CanvasArea;
+// Aggiornamento per Vercel
