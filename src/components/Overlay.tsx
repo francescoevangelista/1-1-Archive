@@ -55,15 +55,20 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
     input.click();
   };
 
-  const title = section === AppSection.UPLOAD ? 'Verify' : (section.charAt(0) + section.slice(1).toLowerCase());
+  // Funzione per formattare il testo in Sentence case
+  const formatTitle = (str: string) => {
+      if (str === 'UPLOAD') return 'Verify';
+      const lower = str.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
 
   return (
     <div className="fixed inset-0 z-[100] bg-white/95 dark:bg-black/95 backdrop-blur-md dark:text-white flex flex-col p-4 md:p-8 overflow-y-auto pointer-events-auto transition-colors animate-fade-in">
       <div className="flex justify-between items-center mb-12 md:mb-16 pt-2">
-        <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
+        <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{formatTitle(section)}</h2>
         <button 
           onClick={onClose}
-          className="text-xs md:text-sm suisse-medium uppercase tracking-wider hover:underline"
+          className="text-xs md:text-sm suisse-medium hover:underline"
         >
           Close
         </button>
@@ -93,7 +98,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-20 mt-auto">
               <div>
-                <h4 className="text-[10px] mb-4 uppercase tracking-widest suisse-medium">Crediti</h4>
+                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium">Crediti</h4>
                 <div className="space-y-1 text-sm leading-tight">
                   <p>Progetto di tesi di Francesco Evangelista</p>
                   <p>NABA Nuova Accademia di Belle Arti, Roma</p>
@@ -102,7 +107,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                 </div>
               </div>
               <div>
-                <h4 className="text-[10px] mb-4 uppercase tracking-widest suisse-medium">Supervisione</h4>
+                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium">Supervisione</h4>
                 <div className="space-y-1 text-sm leading-tight">
                   <p>Relatore: Prof. Riccardo Casinelli</p>
                   <p>Correlatrice: Prof.ssa Martina Tariciotti</p>
@@ -114,7 +119,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
         {section === AppSection.ARCHIVIO && (
           <>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-0 bg-transparent">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-0">
               {Array.from({ length: 88 }).map((_, i) => (
                 <div 
                   key={i} 
@@ -136,7 +141,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             </div>
             {zoomedImage && (
               <div 
-                className="fixed inset-0 z-[110] bg-white/98 dark:bg-black/98 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+                className="fixed inset-0 z-[110] bg-white/98 dark:bg-black/98 flex items-center justify-center p-4 cursor-zoom-out"
                 onClick={() => setZoomedImage(null)}
               >
                 <img 
@@ -162,12 +167,10 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             onDrop={handleDrop}
             onClick={handleFileClick}
           >
-            <div className="text-4xl suisse-medium mb-2 group-hover:scale-110 transition-transform">
-              [ + ]
-            </div>
+            <div className="text-4xl suisse-medium mb-2 group-hover:scale-110 transition-transform">[ + ]</div>
             <div className="text-center space-y-1">
               <h3 className="text-2xl md:text-3xl suisse-medium">
-                {section === AppSection.EXPAND ? 'Expand Archive' : 'Verify Image'}
+                {section === AppSection.EXPAND ? 'Expand archive' : 'Verify image'}
               </h3>
               <p className="text-sm suisse-regular opacity-60">
                 Drag & Drop or Click to upload
@@ -179,7 +182,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         {section === AppSection.UPLOAD && verificationImage && (
           <div className="flex flex-col gap-12 animate-fade-in flex-1">
             <div className="flex flex-col gap-4 items-start">
-               <span className="text-[10px] uppercase tracking-widest suisse-medium">Input Source</span>
+               <span className="text-[10px] tracking-widest suisse-medium">Input source</span>
                <img 
                 src={verificationImage} 
                 alt="Uploaded"
@@ -189,7 +192,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
             <div className="flex-1">
               <div className="flex justify-between items-end mb-6">
-                <span className="text-[10px] uppercase tracking-widest suisse-medium">Database Matches</span>
+                <span className="text-[10px] tracking-widest suisse-medium">Database matches</span>
                 <span className="text-[10px] suisse-mono">10 Results found</span>
               </div>
               
@@ -220,9 +223,9 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             <div className="pt-4">
               <button 
                 onClick={() => setVerificationImage(null)}
-                className="suisse-medium text-xs uppercase tracking-wider hover:underline"
+                className="suisse-medium text-xs tracking-wider hover:underline"
               >
-                Scan New Image
+                Scan new image
               </button>
             </div>
           </div>

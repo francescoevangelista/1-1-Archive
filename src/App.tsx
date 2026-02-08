@@ -43,10 +43,8 @@ function App() {
     document.body.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
-  // Gestione Resize Real-time
   const handleSizeChange = (newSize: number) => {
       setCurrentSize(newSize);
-      // Invia evento al Canvas per ridimensionare i corpi esistenti
       window.dispatchEvent(new CustomEvent('resize-bodies', { detail: newSize }));
   };
 
@@ -134,11 +132,8 @@ function App() {
 
     const id = (stateRef.current.imageCount % 88) + 1;
     const cat = getCategory(id);
-    
     let finalCategory = cat;
-    if (customLabel) {
-        finalCategory = customLabel as Category;
-    }
+    if (customLabel) finalCategory = customLabel as Category;
 
     const imgObj: ImageObject = {
       id,
@@ -150,22 +145,32 @@ function App() {
     playSound();
 
     const size = sizeRef.current;
-    const half = size / 2;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const mobile = vw < 768;
     
-    const headerH = 56;
-    const toolbarH = (mobile && isUiVisible) ? 110 : 0;
-    const sidebarW = (!mobile && isUiVisible) ? 280 : 0;
+    // FIX MOBILE: Se è un upload forzato (Expand), usa il centro dello schermo
+    // altrimenti usa la posizione del mouse
+    let x, y;
     
-    const left = sidebarW + half + 15;
-    const right = vw - half - 15;
-    const top = headerH + half + 15;
-    const bottom = vh - toolbarH - half - 15;
+    if (force) {
+        x = window.innerWidth / 2;
+        y = window.innerHeight / 2;
+    } else {
+        const half = size / 2;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const mobile = vw < 768;
+        
+        const headerH = 60;
+        const toolbarH = (mobile && isUiVisible) ? 300 : 0; // Spazio sicuro toolbar
+        const sidebarW = (!mobile && isUiVisible) ? 280 : 0;
+        
+        const left = sidebarW + half + 10;
+        const right = vw - half - 10;
+        const top = headerH + half + 10;
+        const bottom = vh - toolbarH - half - 10;
 
-    const x = Math.max(left, Math.min(right, mousePosRef.current.x));
-    const y = Math.max(top, Math.min(bottom, mousePosRef.current.y));
+        x = Math.max(left, Math.min(right, mousePosRef.current.x));
+        y = Math.max(top, Math.min(bottom, mousePosRef.current.y));
+    }
 
     window.dispatchEvent(new CustomEvent('add-image', { 
       detail: { image: imgObj, size, x, y } 
@@ -175,11 +180,12 @@ function App() {
   }, [isStarted, isUiVisible, playSound]);
 
   const startGenerating = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Se clicco su un elemento dell'interfaccia, non generare
     const target = e.target as HTMLElement;
-    if (target.closest('.pointer-events-auto') && !target.closest('canvas')) return;
+    if (target.closest('button') || target.closest('.pointer-events-auto')) return;
     
+    // Se sto cliccando sull'overlay, esci
     if (activeSection !== AppSection.NONE) return;
-    if (document.body.getAttribute('data-is-over-body') === 'true') return;
 
     if ('clientX' in e) {
       mousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -205,7 +211,8 @@ function App() {
     setActiveSection(AppSection.NONE);
     const url = URL.createObjectURL(file);
     setMaxCount(prev => prev + 1);
-    setTimeout(() => addImageToCanvas(url, 'EXP', true), 50);
+    // Ritardo per assicurarsi che l'overlay sia chiuso
+    setTimeout(() => addImageToCanvas(url, 'EXP', true), 300);
   };
 
   const triggerChaos = () => window.dispatchEvent(new CustomEvent('chaos-trigger'));
@@ -259,7 +266,7 @@ function App() {
         showCategoryLabels={showCategoryLabels}
         onToggleCategory={() => setShowCategoryLabels(!showCategoryLabels)}
         currentSize={currentSize}
-        onSizeChange={handleSizeChange} // Colleghiamo la nuova funzione qui
+        onSizeChange={handleSizeChange}
         onDelete={() => {
           setImageCount(0);
           setIsStarted(false);
