@@ -28,7 +28,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   const wallsRef = useRef<{ [key: string]: Matter.Body } | null>(null);
   const bodiesMapRef = useRef<Map<number, Matter.Body>>(new Map());
 
-  // 1. Setup Engine & World
+  // 1. Setup Engine
   useEffect(() => {
     if (!sceneRef.current) return;
 
@@ -47,7 +47,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       }
     });
 
-    // Setup Muri
     const wallThick = 60;
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -61,21 +60,30 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     wallsRef.current = { ground, leftWall, rightWall, ceiling };
     Matter.World.add(engine.world, [ground, leftWall, rightWall, ceiling]);
 
-    // Setup Mouse per trascinamento
     const mouse = Matter.Mouse.create(render.canvas);
     mouse.pixelRatio = window.devicePixelRatio;
-    // Aumentiamo la stiffness per una presa più reattiva
     const mouseConstraint = Matter.MouseConstraint.create(engine, {
       mouse: mouse,
-      constraint: { stiffness: 0.7, damping: 0.1, render: { visible: false } }
+      constraint: { stiffness: 0.2, render: { visible: false } }
     });
     Matter.World.add(engine.world, mouseConstraint);
 
-    // Fix eventi scroll
+    // FIX: Blocca la generazione quando si clicca su un oggetto
+    Matter.Events.on(mouseConstraint, 'mousedown', (event) => {
+        const mousePosition = event.mouse.position;
+        const bodies = Matter.Composite.allBodies(engine.world);
+        const clickedBody = Matter.Query.point(bodies, mousePosition)[0];
+        
+        if (clickedBody && !clickedBody.isStatic) {
+            // Stop propagation to prevent App.tsx from generating new image
+            if (event.sourceEvents.mousedown) event.sourceEvents.mousedown.stopPropagation();
+            if (event.sourceEvents.touchstart) event.sourceEvents.touchstart.stopPropagation();
+        }
+    });
+
     mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
-    // Avvio
     const runner = Matter.Runner.create();
     Matter.Runner.run(runner, engine);
     Matter.Render.run(render);
@@ -83,7 +91,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     engineRef.current = engine;
     renderRef.current = render;
 
-    // Resize Handler
     const handleResize = () => {
       if (!render.canvas || !wallsRef.current) return;
       render.canvas.width = window.innerWidth * window.devicePixelRatio;
@@ -107,7 +114,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, []);
 
-  // 2. PAVIMENTO DINAMICO
+  // 2. Pavimento
   useEffect(() => {
     if (!wallsRef.current || !engineRef.current) return;
     const height = window.innerHeight;
@@ -122,20 +129,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     });
   }, [isUiVisible, isMobile]);
 
-  // 3. Gestione Eventi (Add, Clear, Chaos, Save, RESIZE)
+  // 3. Eventi
   useEffect(() => {
     const handleAddImage = (e: CustomEvent) => {
       if (!engineRef.current) return;
       const { image, size, x, y } = e.detail;
       const { id, url, category, averageColor } = image;
 
-      // Creazione corpo fisico ottimizzata per trascinamento
       const body = Matter.Bodies.rectangle(x, y, size, size, {
-        chamfer: { radius: 2 }, // Leggero smusso per evitare incastri
-        restitution: 0.4, // Rimbalzo
-        friction: 0.1,    // Basso attrito per scivolare
-        frictionAir: 0.01, // Bassa resistenza all'aria
-        density: 0.001,    // Leggeri per essere spostati facilmente
+        chamfer: { radius: 0 },
+        restitution: 0.4,
+        friction: 0.1,
+        frictionAir: 0.02,
         render: {
             visible: isPhotoMode, 
             sprite: {
@@ -147,10 +152,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         label: category
       });
 
-      (body as any).customData = {
-        id, category, color: averageColor, w: size, h: size,
-      };
-
+      (body as any).customData = { id, category, color: averageColor, w: size, h: size };
       bodiesMapRef.current.set(body.id, body);
       Matter.World.add(engineRef.current.world, body);
     };
@@ -166,12 +168,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
        if (!engineRef.current) return;
        const bodies = Array.from(bodiesMapRef.current.values());
        bodies.forEach(b => {
-         // Forza più intensa e casuale
-         const forceMagnitude = 0.05 * b.mass;
-         Matter.Body.applyForce(b, b.position, { 
-           x: (Math.random() - 0.5) * forceMagnitude,
-           y: (Math.random() - 0.8) * forceMagnitude // Spinta verso l'alto
-         });
+         const force = 0.05 * b.mass;
+         Matter.Body.applyForce(b, b.position, { x: (Math.random() - 0.5) * force, y: (Math.random() - 0.8) * force });
        });
     };
 
@@ -179,20 +177,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         if (!renderRef.current || !renderRef.current.canvas) return;
         try {
             const link = document.createElement('a');
-            link.download = `1-1-archivio-capture.png`;
+            link.download = `capture-${Date.now()}.png`;
             link.href = renderRef.current.canvas.toDataURL('image/png');
             link.click();
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
     };
 
     const handleResizeBodies = (e: CustomEvent) => {
         const newSize = e.detail;
         bodiesMapRef.current.forEach(body => {
             const currentW = (body as any).customData.w;
-            const scaleFactor = newSize / currentW;
-            Matter.Body.scale(body, scaleFactor, scaleFactor);
+            const scale = newSize / currentW;
+            Matter.Body.scale(body, scale, scale);
             (body as any).customData.w = newSize;
             (body as any).customData.h = newSize;
             if (body.render.sprite) {
@@ -217,7 +213,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, [isPhotoMode]);
 
-  // 4. Custom Render Loop (CORRETTO)
+  // 4. Render Custom (SOLUZIONE GRAFICA)
   useEffect(() => {
     if (!renderRef.current) return;
     const render = renderRef.current;
@@ -228,8 +224,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       const bodies = Array.from(bodiesMapRef.current.values());
 
       bodies.forEach(body => {
-        // Se è in PhotoMode, Matter disegna lo sprite. Noi disegniamo solo gli extra sopra.
-        // Se NON è PhotoMode, Matter non disegna nulla (visible: false) e noi disegniamo il colore.
         const { x, y } = body.position;
         const customData = (body as any).customData;
         if (!customData) return;
@@ -241,45 +235,44 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // 1. Disegno Colore Solido (se non è photo mode)
+        // Se non è photo mode, disegniamo il rettangolo colorato
         if (!isPhotoMode) {
-          ctx.fillStyle = isBlackAndWhite ? '#333' : color; // Grigio scuro invece di #888
+          ctx.fillStyle = isBlackAndWhite ? '#333' : color;
           ctx.fillRect(-w/2, -h/2, w, h);
         }
         
-        // 2. Effetto Acetato (Overlap) - Disegnato SOPRA l'immagine o il colore
+        // Acetate Mode (Disegna sopra solo se attivo)
         if (isOverlapMode) {
-           ctx.globalCompositeOperation = 'multiply'; // Multiply funziona meglio per effetto "lastra"
-           // Colore leggermente caldo per l'acetato
-           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(220, 210, 200, 0.3)' : 'rgba(40, 30, 20, 0.3)';
+           ctx.globalCompositeOperation = 'multiply';
+           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(220, 210, 200, 0.3)' : 'rgba(40, 30, 20, 0.15)';
            ctx.fillRect(-w/2, -h/2, w, h);
            ctx.globalCompositeOperation = 'source-over';
         }
 
-        // 3. Bordo (Stroke) - Disegnato PER ULTIMO per stare sopra a tutto
+        // Bordo (Stroke)
         if (hasStroke) {
           ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          ctx.lineWidth = 1; 
-          // Disegna esattamente sul bordo del rettangolo riempito
+          ctx.lineWidth = 1;
           ctx.strokeRect(-w/2, -h/2, w, h);
         }
 
-        // 4. Etichette Metadati (Posizionate nell'angolo in alto a sinistra)
+        // Etichette (Top-Left interno)
         if (showCategoryLabels) {
-          const labelW = 28;
-          const labelH = 12;
-          // Sfondo etichetta (angolo top-left: -w/2, -h/2)
-          ctx.fillStyle = document.body.classList.contains('dark') ? '#000' : '#FFF';
-          ctx.fillRect(-w/2, -h/2, labelW, labelH);
+          const fontSize = 9;
+          ctx.font = `${fontSize}px "Suisse Intl Mono", monospace`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
           
-          // Testo etichetta
+          // Sfondo etichetta (piccolo rettangolo)
+          const textWidth = ctx.measureText(category).width;
+          const pad = 3;
+          
+          ctx.fillStyle = document.body.classList.contains('dark') ? '#000' : '#FFF';
+          ctx.fillRect(-w/2, -h/2, textWidth + pad*2, fontSize + pad*2);
+          
+          // Testo
           ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          // Font monospaziato per look tecnico
-          ctx.font = '9px "Suisse Intl Mono", monospace'; 
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          // Centro del rettangolino
-          ctx.fillText(category, -w/2 + labelW/2, -h/2 + labelH/2 + 0.5);
+          ctx.fillText(category, -w/2 + pad, -h/2 + pad);
         }
 
         ctx.restore();
@@ -293,10 +286,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
   }, [hasStroke, isBlackAndWhite, isOverlapMode, showCategoryLabels, isPhotoMode]);
 
-  // 5. Gravity
   useEffect(() => {
     if (!engineRef.current) return;
-    // Gravità più forte per far cadere le cose con decisione
     engineRef.current.world.gravity.y = gravityEnabled ? 1.5 : 0;
     Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
        if (!body.isStatic) Matter.Sleeping.set(body, false);
@@ -306,10 +297,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   return (
     <div 
       ref={sceneRef} 
-      // Rimosso pointer-events-none per permettere l'interazione con il canvas
-      className={`absolute inset-0 z-10 transition-opacity duration-500
-        ${isBlackAndWhite ? 'grayscale' : ''}
-      `}
+      className={`absolute inset-0 z-10 transition-opacity duration-500 ${isBlackAndWhite ? 'grayscale' : ''}`}
     />
   );
 };

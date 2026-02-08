@@ -3,7 +3,7 @@ export enum AppSection {
   ARCHIVIO = 'ARCHIVIO',
   INFO = 'INFO',
   EXPAND = 'EXPAND',
-  UPLOAD = 'UPLOAD' // Corrisponde alla voce "Verify"
+  UPLOAD = 'UPLOAD' // Corrisponde a "Verify"
 }
 
 export type Category = 'AMB' | 'STL' | 'FIG' | 'GRA' | 'EXP';
