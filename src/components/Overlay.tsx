@@ -63,7 +63,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         <h2 className="text-4xl md:text-6xl suisse-medium tracking-tighter">{title}</h2>
         <button 
           onClick={onClose}
-          className="text-xs md:text-sm suisse-medium hover:underline"
+          className="text-xs md:text-sm suisse-medium uppercase tracking-wider hover:underline"
         >
           Close
         </button>
@@ -73,21 +73,36 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         {section === AppSection.INFO && (
           <div className="max-w-4xl">
             <div className="text-xl md:text-3xl leading-normal space-y-8 suisse-regular">
-              <p>Mai nella storia sono state prodotte tante immagini.<br/>Mai le immagini sono state così simili tra loro.</p>
-              <p>Questo archivio open source raccoglie 88 fotografie estratte dai social media, divise in quattro categorie: Ambienti, Still Life, Figure, Graphic.</p>
-              <p>Sovrapposte su fogli di acetato trasparente, le immagini rivelano la loro natura intercambiabile.</p>
+              <p>
+                Mai nella storia sono state prodotte tante immagini.<br/>
+                Mai le immagini sono state così simili tra loro.
+              </p>
+              <p>
+                Questo archivio open source raccoglie 88 fotografie estratte dai social media, 
+                divise in quattro categorie: Ambienti, Still Life, Figure, Graphic.
+              </p>
+              <p>
+                È uno strumento in continua espansione: gli utenti possono contribuire all'archivio 
+                o verificare se le proprie immagini sono già presenti nel dataset.
+              </p>
+              <p>
+                Sovrapposte su fogli di acetato trasparente, le immagini rivelano la loro 
+                natura intercambiabile, convergendo in una macchia indistinta.
+              </p>
             </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-20 mt-auto">
               <div>
-                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium uppercase">Crediti</h4>
+                <h4 className="text-[10px] mb-4 uppercase tracking-widest suisse-medium">Crediti</h4>
                 <div className="space-y-1 text-sm leading-tight">
                   <p>Progetto di tesi di Francesco Evangelista</p>
                   <p>NABA Nuova Accademia di Belle Arti, Roma</p>
+                  <p>Diploma in Graphic Design e Art Direction</p>
                   <p>Marzo 2026</p>
                 </div>
               </div>
               <div>
-                <h4 className="text-[10px] mb-4 tracking-widest suisse-medium uppercase">Supervisione</h4>
+                <h4 className="text-[10px] mb-4 uppercase tracking-widest suisse-medium">Supervisione</h4>
                 <div className="space-y-1 text-sm leading-tight">
                   <p>Relatore: Prof. Riccardo Casinelli</p>
                   <p>Correlatrice: Prof.ssa Martina Tariciotti</p>
@@ -99,7 +114,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
         {section === AppSection.ARCHIVIO && (
           <>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-0">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-0 bg-transparent">
               {Array.from({ length: 88 }).map((_, i) => (
                 <div 
                   key={i} 
@@ -113,7 +128,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
                     onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${i}/400/400` }}
                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300" 
                   />
-                  <span className="absolute bottom-0 right-0 text-[8px] suisse-mono bg-black text-white dark:bg-white dark:text-black px-1 py-0.5 opacity-0 group-hover:opacity-100">
+                  <span className="absolute bottom-0 right-0 text-[8px] suisse-mono bg-black text-white dark:bg-white dark:text-black px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                 </div>
@@ -121,7 +136,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             </div>
             {zoomedImage && (
               <div 
-                className="fixed inset-0 z-[110] bg-white/98 dark:bg-black/98 flex items-center justify-center p-4 cursor-zoom-out"
+                className="fixed inset-0 z-[110] bg-white/98 dark:bg-black/98 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
                 onClick={() => setZoomedImage(null)}
               >
                 <img 
@@ -136,18 +151,27 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
         {(section === AppSection.EXPAND || (section === AppSection.UPLOAD && !verificationImage)) && (
           <div 
-            className="flex-1 w-full border-2 border-dashed transition-all cursor-pointer group flex flex-col items-center justify-center gap-4 border-black/30 dark:border-white/30 hover:border-black dark:hover:border-white"
+            className={`flex-1 w-full border-2 border-dashed transition-all cursor-pointer group flex flex-col items-center justify-center gap-4
+              ${dragActive 
+                ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white' 
+                : 'border-black/30 dark:border-white/30 hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-zinc-900'
+              }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onClick={handleFileClick}
           >
-            <div className="text-4xl suisse-medium mb-2 group-hover:scale-110 transition-transform">[ + ]</div>
+            <div className="text-4xl suisse-medium mb-2 group-hover:scale-110 transition-transform">
+              [ + ]
+            </div>
             <div className="text-center space-y-1">
               <h3 className="text-2xl md:text-3xl suisse-medium">
-                {section === AppSection.EXPAND ? 'Expand archive' : 'Verify image'}
+                {section === AppSection.EXPAND ? 'Expand Archive' : 'Verify Image'}
               </h3>
+              <p className="text-sm suisse-regular opacity-60">
+                Drag & Drop or Click to upload
+              </p>
             </div>
           </div>
         )}
@@ -155,8 +179,8 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
         {section === AppSection.UPLOAD && verificationImage && (
           <div className="flex flex-col gap-12 animate-fade-in flex-1">
             <div className="flex flex-col gap-4 items-start">
-              <span className="text-[10px] tracking-widest suisse-medium uppercase">Input source</span>
-              <img 
+               <span className="text-[10px] uppercase tracking-widest suisse-medium">Input Source</span>
+               <img 
                 src={verificationImage} 
                 alt="Uploaded"
                 className="w-32 h-32 md:w-48 md:h-48 object-cover border border-black dark:border-white" 
@@ -165,7 +189,7 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
 
             <div className="flex-1">
               <div className="flex justify-between items-end mb-6">
-                <span className="text-[10px] tracking-widest suisse-medium uppercase">Database matches</span>
+                <span className="text-[10px] uppercase tracking-widest suisse-medium">Database Matches</span>
                 <span className="text-[10px] suisse-mono">10 Results found</span>
               </div>
               
@@ -196,9 +220,9 @@ const Overlay: React.FC<OverlayProps> = ({ section, onClose, onFileUpload }) => 
             <div className="pt-4">
               <button 
                 onClick={() => setVerificationImage(null)}
-                className="suisse-medium text-xs hover:underline"
+                className="suisse-medium text-xs uppercase tracking-wider hover:underline"
               >
-                Scan new image
+                Scan New Image
               </button>
             </div>
           </div>
