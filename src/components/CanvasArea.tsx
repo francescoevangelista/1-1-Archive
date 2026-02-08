@@ -10,8 +10,6 @@ interface CanvasAreaProps {
   gravityEnabled: boolean;
   isUiVisible: boolean;
   isMobile: boolean;
-  // Aggiungiamo currentSize come prop se vogliamo reagire direttamente, 
-  // ma useremo un evento custom per performance migliori
 }
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({
@@ -49,37 +47,35 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       }
     });
 
+    // Setup Muri
     const wallThick = 60;
     const width = window.innerWidth;
     const height = window.innerHeight;
+    const wallOptions = { isStatic: true, render: { visible: false }, friction: 0.5 };
 
-    const ground = Matter.Bodies.rectangle(width / 2, height + wallThick / 2 - 10, width, wallThick, { 
-      isStatic: true, label: 'ground', render: { visible: false } 
-    });
-    const leftWall = Matter.Bodies.rectangle(0 - wallThick / 2, height / 2, wallThick, height * 5, { 
-      isStatic: true, label: 'wall', render: { visible: false } 
-    });
-    const rightWall = Matter.Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 5, { 
-      isStatic: true, label: 'wall', render: { visible: false } 
-    });
-    const ceiling = Matter.Bodies.rectangle(width / 2, -wallThick * 4, width, wallThick, { 
-      isStatic: true, label: 'ceiling', render: { visible: false } 
-    });
+    const ground = Matter.Bodies.rectangle(width / 2, height + wallThick / 2 - 10, width, wallThick, { ...wallOptions, label: 'ground' });
+    const leftWall = Matter.Bodies.rectangle(0 - wallThick / 2, height / 2, wallThick, height * 5, { ...wallOptions, label: 'wall' });
+    const rightWall = Matter.Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 5, { ...wallOptions, label: 'wall' });
+    const ceiling = Matter.Bodies.rectangle(width / 2, -wallThick * 4, width, wallThick, { ...wallOptions, label: 'ceiling' });
 
     wallsRef.current = { ground, leftWall, rightWall, ceiling };
     Matter.World.add(engine.world, [ground, leftWall, rightWall, ceiling]);
 
+    // Setup Mouse per trascinamento
     const mouse = Matter.Mouse.create(render.canvas);
     mouse.pixelRatio = window.devicePixelRatio;
+    // Aumentiamo la stiffness per una presa più reattiva
     const mouseConstraint = Matter.MouseConstraint.create(engine, {
       mouse: mouse,
-      constraint: { stiffness: 0.2, render: { visible: false } }
+      constraint: { stiffness: 0.7, damping: 0.1, render: { visible: false } }
     });
     Matter.World.add(engine.world, mouseConstraint);
 
+    // Fix eventi scroll
     mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
+    // Avvio
     const runner = Matter.Runner.create();
     Matter.Runner.run(runner, engine);
     Matter.Render.run(render);
@@ -87,17 +83,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     engineRef.current = engine;
     renderRef.current = render;
 
+    // Resize Handler
     const handleResize = () => {
-      if (!render.canvas) return;
+      if (!render.canvas || !wallsRef.current) return;
       render.canvas.width = window.innerWidth * window.devicePixelRatio;
       render.canvas.height = window.innerHeight * window.devicePixelRatio;
       render.options.width = window.innerWidth;
       render.options.height = window.innerHeight;
       
-      if (wallsRef.current) {
-        Matter.Body.setPosition(wallsRef.current.rightWall, { x: window.innerWidth + 30, y: window.innerHeight / 2 });
-        Matter.Body.setPosition(wallsRef.current.ground, { x: window.innerWidth / 2, y: window.innerHeight + 30 });
-      }
+      Matter.Body.setPosition(wallsRef.current.rightWall, { x: window.innerWidth + 30, y: window.innerHeight / 2 });
+      Matter.Body.setPosition(wallsRef.current.ground, { x: window.innerWidth / 2, y: window.innerHeight + 30 });
     };
     window.addEventListener('resize', handleResize);
 
@@ -115,25 +110,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   // 2. PAVIMENTO DINAMICO
   useEffect(() => {
     if (!wallsRef.current || !engineRef.current) return;
-    
     const height = window.innerHeight;
     const width = window.innerWidth;
     const wallThick = 60;
-    
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
     const newY = height - toolbarHeight + (wallThick / 2);
 
-    Matter.Body.setPosition(wallsRef.current.ground, {
-      x: width / 2,
-      y: newY
-    });
-
+    Matter.Body.setPosition(wallsRef.current.ground, { x: width / 2, y: newY });
     Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
-      if (!body.isStatic) {
-        Matter.Sleeping.set(body, false);
-      }
+      if (!body.isStatic) Matter.Sleeping.set(body, false);
     });
-
   }, [isUiVisible, isMobile]);
 
   // 3. Gestione Eventi (Add, Clear, Chaos, Save, RESIZE)
@@ -143,11 +129,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       const { image, size, x, y } = e.detail;
       const { id, url, category, averageColor } = image;
 
+      // Creazione corpo fisico ottimizzata per trascinamento
       const body = Matter.Bodies.rectangle(x, y, size, size, {
-        chamfer: { radius: 0 },
-        restitution: 0.5,
-        friction: 0.5,
-        frictionAir: 0.02,
+        chamfer: { radius: 2 }, // Leggero smusso per evitare incastri
+        restitution: 0.4, // Rimbalzo
+        friction: 0.1,    // Basso attrito per scivolare
+        frictionAir: 0.01, // Bassa resistenza all'aria
+        density: 0.001,    // Leggeri per essere spostati facilmente
         render: {
             visible: isPhotoMode, 
             sprite: {
@@ -160,12 +148,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       });
 
       (body as any).customData = {
-        id,
-        category,
-        color: averageColor,
-        w: size,
-        h: size,
-        baseScale: size / 400 // Salviamo la scala base
+        id, category, color: averageColor, w: size, h: size,
       };
 
       bodiesMapRef.current.set(body.id, body);
@@ -183,9 +166,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
        if (!engineRef.current) return;
        const bodies = Array.from(bodiesMapRef.current.values());
        bodies.forEach(b => {
+         // Forza più intensa e casuale
+         const forceMagnitude = 0.05 * b.mass;
          Matter.Body.applyForce(b, b.position, { 
-           x: (Math.random() - 0.5) * 0.5 * b.mass,
-           y: (Math.random() - 0.5) * 0.5 * b.mass
+           x: (Math.random() - 0.5) * forceMagnitude,
+           y: (Math.random() - 0.8) * forceMagnitude // Spinta verso l'alto
          });
        });
     };
@@ -194,33 +179,20 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         if (!renderRef.current || !renderRef.current.canvas) return;
         try {
             const link = document.createElement('a');
-            link.download = `1-1-archivio-${new Date().toISOString().slice(0,10)}.png`;
+            link.download = `1-1-archivio-capture.png`;
             link.href = renderRef.current.canvas.toDataURL('image/png');
             link.click();
-            link.remove();
-        } catch (err) {
-            console.error("Errore save:", err);
-        }
+        } catch (err) console.error(err);
     };
 
-    // NUOVO: Gestione Resize in tempo reale (Issue 1)
     const handleResizeBodies = (e: CustomEvent) => {
-        if (!engineRef.current) return;
         const newSize = e.detail;
-        const bodies = Array.from(bodiesMapRef.current.values());
-        
-        bodies.forEach(body => {
+        bodiesMapRef.current.forEach(body => {
             const currentW = (body as any).customData.w;
             const scaleFactor = newSize / currentW;
-            
-            // Scaliamo il corpo fisico
             Matter.Body.scale(body, scaleFactor, scaleFactor);
-            
-            // Aggiorniamo i dati custom
             (body as any).customData.w = newSize;
             (body as any).customData.h = newSize;
-            
-            // Aggiorniamo lo sprite
             if (body.render.sprite) {
                 body.render.sprite.xScale = newSize / 400;
                 body.render.sprite.yScale = newSize / 400;
@@ -243,7 +215,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, [isPhotoMode]);
 
-  // 4. Custom Render Loop
+  // 4. Custom Render Loop (CORRETTO)
   useEffect(() => {
     if (!renderRef.current) return;
     const render = renderRef.current;
@@ -254,8 +226,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
       const bodies = Array.from(bodiesMapRef.current.values());
 
       bodies.forEach(body => {
-        if (!body.render.visible && isPhotoMode) return;
-
+        // Se è in PhotoMode, Matter disegna lo sprite. Noi disegniamo solo gli extra sopra.
+        // Se NON è PhotoMode, Matter non disegna nulla (visible: false) e noi disegniamo il colore.
         const { x, y } = body.position;
         const customData = (body as any).customData;
         if (!customData) return;
@@ -267,43 +239,45 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // Photo Mode Logic
+        // 1. Disegno Colore Solido (se non è photo mode)
         if (!isPhotoMode) {
-          ctx.fillStyle = isBlackAndWhite ? '#888' : color;
+          ctx.fillStyle = isBlackAndWhite ? '#333' : color; // Grigio scuro invece di #888
           ctx.fillRect(-w/2, -h/2, w, h);
         }
         
-        // Acetate / Overlap Logic
-        if (isOverlapMode && isPhotoMode) {
-           ctx.globalCompositeOperation = document.body.classList.contains('dark') ? 'screen' : 'multiply';
-           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+        // 2. Effetto Acetato (Overlap) - Disegnato SOPRA l'immagine o il colore
+        if (isOverlapMode) {
+           ctx.globalCompositeOperation = 'multiply'; // Multiply funziona meglio per effetto "lastra"
+           // Colore leggermente caldo per l'acetato
+           ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(220, 210, 200, 0.3)' : 'rgba(40, 30, 20, 0.3)';
            ctx.fillRect(-w/2, -h/2, w, h);
            ctx.globalCompositeOperation = 'source-over';
         }
 
-        // Stroke Logic
+        // 3. Bordo (Stroke) - Disegnato PER ULTIMO per stare sopra a tutto
         if (hasStroke) {
           ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          ctx.lineWidth = 1; // Bordo sottile elegante
+          ctx.lineWidth = 1; 
+          // Disegna esattamente sul bordo del rettangolo riempito
           ctx.strokeRect(-w/2, -h/2, w, h);
         }
 
-        // Metadata Labels Logic (Top-Left corner of the image)
+        // 4. Etichette Metadati (Posizionate nell'angolo in alto a sinistra)
         if (showCategoryLabels) {
-          // Disegna piccolo rettangolo background
+          const labelW = 28;
+          const labelH = 12;
+          // Sfondo etichetta (angolo top-left: -w/2, -h/2)
           ctx.fillStyle = document.body.classList.contains('dark') ? '#000' : '#FFF';
-          const labelW = 24; // Larghezza fissa piccola
-          const labelH = 10;
-          
-          // Posizionato esattamente all'angolo in alto a sinistra dell'immagine
           ctx.fillRect(-w/2, -h/2, labelW, labelH);
           
-          // Testo
+          // Testo etichetta
           ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
-          ctx.font = '8px "Suisse Intl"'; // Font molto piccolo e tecnico
+          // Font monospaziato per look tecnico
+          ctx.font = '9px "Suisse Intl Mono", monospace'; 
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(category, -w/2 + labelW/2, -h/2 + labelH/2);
+          // Centro del rettangolino
+          ctx.fillText(category, -w/2 + labelW/2, -h/2 + labelH/2 + 0.5);
         }
 
         ctx.restore();
@@ -320,7 +294,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   // 5. Gravity
   useEffect(() => {
     if (!engineRef.current) return;
-    engineRef.current.world.gravity.y = gravityEnabled ? 1 : 0;
+    // Gravità più forte per far cadere le cose con decisione
+    engineRef.current.world.gravity.y = gravityEnabled ? 1.5 : 0;
     Matter.Composite.allBodies(engineRef.current.world).forEach((body) => {
        if (!body.isStatic) Matter.Sleeping.set(body, false);
     });
@@ -329,7 +304,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
   return (
     <div 
       ref={sceneRef} 
-      className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-500
+      // Rimosso pointer-events-none per permettere l'interazione con il canvas
+      className={`absolute inset-0 z-10 transition-opacity duration-500
         ${isBlackAndWhite ? 'grayscale' : ''}
       `}
     />
