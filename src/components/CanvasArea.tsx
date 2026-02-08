@@ -68,8 +68,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     });
     Matter.World.add(engine.world, mouseConstraint);
 
-    // FIX: Blocca la generazione quando si clicca su un oggetto
-    Matter.Events.on(mouseConstraint, 'mousedown', (event) => {
+    // FIX TYPING: Aggiunto ': any' per evitare l'errore rosso su sourceEvents
+    Matter.Events.on(mouseConstraint, 'mousedown', (event: any) => {
         const mousePosition = event.mouse.position;
         const bodies = Matter.Composite.allBodies(engine.world);
         const clickedBody = Matter.Query.point(bodies, mousePosition)[0];
@@ -213,7 +213,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     };
   }, [isPhotoMode]);
 
-  // 4. Render Custom (SOLUZIONE GRAFICA)
+  // 4. Render Custom
   useEffect(() => {
     if (!renderRef.current) return;
     const render = renderRef.current;
@@ -235,13 +235,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // Se non è photo mode, disegniamo il rettangolo colorato
         if (!isPhotoMode) {
           ctx.fillStyle = isBlackAndWhite ? '#333' : color;
           ctx.fillRect(-w/2, -h/2, w, h);
         }
         
-        // Acetate Mode (Disegna sopra solo se attivo)
         if (isOverlapMode) {
            ctx.globalCompositeOperation = 'multiply';
            ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(220, 210, 200, 0.3)' : 'rgba(40, 30, 20, 0.15)';
@@ -249,28 +247,24 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
            ctx.globalCompositeOperation = 'source-over';
         }
 
-        // Bordo (Stroke)
         if (hasStroke) {
           ctx.strokeStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
           ctx.lineWidth = 1;
           ctx.strokeRect(-w/2, -h/2, w, h);
         }
 
-        // Etichette (Top-Left interno)
         if (showCategoryLabels) {
           const fontSize = 9;
           ctx.font = `${fontSize}px "Suisse Intl Mono", monospace`;
           ctx.textAlign = 'left';
           ctx.textBaseline = 'top';
           
-          // Sfondo etichetta (piccolo rettangolo)
           const textWidth = ctx.measureText(category).width;
           const pad = 3;
           
           ctx.fillStyle = document.body.classList.contains('dark') ? '#000' : '#FFF';
           ctx.fillRect(-w/2, -h/2, textWidth + pad*2, fontSize + pad*2);
           
-          // Testo
           ctx.fillStyle = document.body.classList.contains('dark') ? '#FFF' : '#000';
           ctx.fillText(category, -w/2 + pad, -h/2 + pad);
         }
