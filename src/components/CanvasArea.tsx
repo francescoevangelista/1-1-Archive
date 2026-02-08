@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import Matter from 'matter-js';
 
-// Rimosso import ImageObject inutilizzato
-
 interface CanvasAreaProps {
   hasStroke: boolean;
   isBlackAndWhite: boolean;
@@ -82,7 +80,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     });
     Matter.World.add(engine.world, mouseConstraint);
 
-    // Fix event listeners passive warning
     mouse.element.removeEventListener("mousewheel", (mouse as any).mousewheel);
     mouse.element.removeEventListener("DOMMouseScroll", (mouse as any).mousewheel);
 
@@ -113,7 +110,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
     const width = window.innerWidth;
     const wallThick = 60;
     
-    // isMobile e isUiVisible sono usati qui, quindi non daranno errore
     const toolbarHeight = isMobile && isUiVisible ? 360 : (isMobile ? 60 : 0); 
     const newY = height - toolbarHeight + (wallThick / 2);
 
@@ -158,7 +154,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
         color: averageColor,
         w: size,
         h: size
-        // Nota: 'url' non viene salvato qui perché non serve nel render loop successivo
       };
 
       bodiesMapRef.current.set(body.id, body);
@@ -205,7 +200,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 
       bodies.forEach(body => {
         const { x, y } = body.position;
-        // Qui estraiamo solo quello che usiamo. 'url' è stato rimosso per evitare errori.
         const { w, h, category, color } = (body as any).customData;
         const angle = body.angle;
 
@@ -263,4 +257,3 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({
 };
 
 export default CanvasArea;
-// Aggiornamento per Vercel
