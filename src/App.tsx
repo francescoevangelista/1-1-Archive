@@ -108,7 +108,8 @@ function App() {
       AMB: '#D4C5B0', 
       STL: '#B8A898', 
       FIG: '#9CAF88', 
-      GRA: '#4A4A4A' 
+      GRA: '#4A4A4A',
+      EXP: '#E5E5E5' // Aggiunto EXP per risolvere l'errore TS
     };
     return colors[cat];
   };
@@ -126,11 +127,18 @@ function App() {
 
     const id = (stateRef.current.imageCount % 88) + 1;
     const cat = getCategory(id);
+    
+    // Gestione sicura della categoria per immagini caricate
+    let finalCategory = cat;
+    if (customLabel) {
+        finalCategory = customLabel as Category;
+    }
+
     const imgObj: ImageObject = {
       id,
       url: customUrl || `assets/img-${id}.png`,
-      category: (customLabel as Category) || cat,
-      averageColor: getColor(cat)
+      category: finalCategory,
+      averageColor: getColor(finalCategory)
     };
     
     playSound();
@@ -176,7 +184,7 @@ function App() {
     addImageToCanvas();
     
     if (genIntervalRef.current) clearInterval(genIntervalRef.current);
-    genIntervalRef.current = window.setInterval(addImageToCanvas, 100);
+    genIntervalRef.current = window.setInterval(() => addImageToCanvas(), 100);
   }, [addImageToCanvas, activeSection]);
 
   const stopGenerating = useCallback(() => {
@@ -220,7 +228,6 @@ function App() {
         isPhotoMode={isPhotoMode}
         isOverlapMode={isOverlapMode}
         showCategoryLabels={showCategoryLabels}
-        // currentSize rimosso per evitare errore TS
         gravityEnabled={gravityEnabled}
         isUiVisible={isUiVisible}
         isMobile={isMobile}
